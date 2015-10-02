@@ -9,7 +9,7 @@ module ClassificationTool
   def self.classifier_hostname
     @classifier_hostname ||= `grep server /etc/puppetlabs/puppet/classifier.yaml | cut -d' ' -f2`.strip
   end
-  
+
   # URL of classifier as well as certificates and private key for auth
   def self.auth_info
     @auth_info ||= {
@@ -25,19 +25,9 @@ module ClassificationTool
   end
 
   class PERepo
- 
-    NAME = "pe-repo-classes"
 
-    attr_reader :classifier
-  
-    def init
-      @classifier = ClassificationTool.classifier
-    end
-  
-    def create
-      classifier.groups.create_group(
-        "name" => NAME,
-        "classes" => {
+    NAME = "pe-repo-classes"
+    CLASSES = {
       #    "pe_repo::platform::aix_53_power" => {},
       #    "pe_repo::platform::aix_61_power" => {},
       #    "pe_repo::platform::aix_71_power" => {},
@@ -79,18 +69,41 @@ module ClassificationTool
           "pe_repo::platform::ubuntu_1504_i386" => {},
           "pe_repo::platform::windows_i386" => {},
           "pe_repo::platform::windows_x86_64" => {},
-        },
-        "rule" => [ "and",  [ '=', 'name', hostname ] ],
+    }
+
+    attr_reader :classifier
+
+    def initialize
+      @classifier = ClassificationTool.classifier
+    end
+
+    def create
+      classifier.groups.create_group(
+        "name" => NAME,
+        "classes" => CLASSES,
+        "rule" => [ "and",  [ '=', 'name', ClassificationTool.hostname ] ],
         "parent"=>"00000000-0000-4000-8000-000000000000"
       )
     end
 
     def id
-      classifier.groups.get_groupid(NAME)
+      classifier.groups.get_group_id(NAME)
     end
 
     def remove
       classifier.groups.delete_group(id)
+    end
+
+    def update(agent_version)
+      classes = CLASSES.inject({}) do |hash,row|
+	hash[row[0]] = { "agent_version" => agent_version }
+	hash
+      end
+
+      classifier.groups.update_group(
+	"id" => id,
+	"classes" => classes
+      )
     end
   end
 end
@@ -108,5 +121,8 @@ if ARGV.empty?
 end
 
 command = ARGV.shift
+version = ARGV.shift
 pe_repo = ClassificationTool::PERepo.new
-pe_repo.send(command, ARGV.shift)
+version ?
+  pe_repo.send(command, version) :
+  pe_repo.send(command)
