@@ -1,0 +1,9 @@
+cd /pe_builds
+PLATFORM_STRING='ubuntu-14.04-amd64'
+BUILD=$(ls -d puppet-enterprise-4.0.0-*-${PLATFORM_STRING?}* | tail -n1)
+BUILD=${BUILD%.tar.gz}
+cd "$BUILD"
+
+./puppet-enterprise-installer "$@" 2>&1 | tee /vagrant/debug.log
+
+echo "** Installer exited with code: ${PIPESTATUS[0]}"
