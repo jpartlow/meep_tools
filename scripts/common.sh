@@ -50,7 +50,8 @@ ssh_on() {
         pwd
         vagrant ssh $_hostname -c "sudo $_command"
     else
-        ssh root@${_host} "$_command"
+        # accept master's host key since it's just a qa vm
+        ssh -o StrictHostKeyChecking=no root@${_host} "$_command"
     fi    
 }
 
