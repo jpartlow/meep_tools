@@ -16,5 +16,5 @@ ensure_rsync $PLATFORM $target
 
 ruby_bin='/opt/puppetlabs/puppet/bin'
 ssh_on $target "${ruby_bin?}/gem install puppetclassify"
-rsync_on $target ./pe_repo.rb /tmp
-#ssh_on $target "${ruby_bin?}/ruby /tmp/pe_repo.rb"
+rsync_on $target ./pe_repo.rb /usr/local/bin
+#ssh_on $target "pe_repo.rb"

@@ -1,3 +1,5 @@
+#! /opt/puppetlabs/puppet/bin/ruby
+
 require 'puppetclassify'
 
 module ClassificationTool
@@ -104,6 +106,11 @@ module ClassificationTool
 	"id" => id,
 	"classes" => classes
       )
+    end
+
+    def show
+      require 'pp'
+      pp classifier.groups.get_group(id)
     end
   end
 end
