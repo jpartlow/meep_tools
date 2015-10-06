@@ -1,8 +1,32 @@
 #! /opt/puppetlabs/puppet/bin/ruby
 
 require 'puppetclassify'
+require 'pp'
 
 module ClassificationTool
+
+  def self.usage
+    puts "USAGE: classifcation-tool.rb <command> <subcommand>"
+    puts <<-EOS
+    commands:
+
+      perepo:
+
+        subcommands:
+          create - create a group '#{ClassificationTool::PERepo::NAME}' with the
+                   initial pe_repo classes for the master for all platforms
+          remove - remove this group
+          update <agent_version> - update all classes in the group to <agent_version>
+          show   - lit the pe_repo classes
+
+      compile:
+
+        subcommands:
+          install <compile-master-hostname> - install a compile master on the given host
+            ex: `classification-tool.rb compile install pe-201520-agent.puppetdebug.vlan`
+    EOS
+    exit 1
+  end
 
   def self.hostname
     @hostname ||= `/opt/puppetlabs/bin/facter fqdn`.strip
@@ -26,7 +50,28 @@ module ClassificationTool
     PuppetClassify.new(classifier_url, auth_info)
   end
 
-  class PERepo
+  class Command
+    attr_reader :classifier
+
+    def initialize
+      @classifier = ClassificationTool.classifier
+    end
+
+    def dispatch(subcommand, *args)
+      ClassificationTool.usage if subcommand.nil? || !respond_to?(subcommand)
+      send(subcommand, *args)
+    end
+
+    def id
+      classifier.groups.get_group_id(_name)
+    end
+
+    def show
+      pp classifier.groups.get_group(id)
+    end
+  end
+
+  class PERepo < Command
 
     NAME = "pe-repo-classes"
     CLASSES = {
@@ -73,12 +118,6 @@ module ClassificationTool
           "pe_repo::platform::windows_x86_64" => {},
     }
 
-    attr_reader :classifier
-
-    def initialize
-      @classifier = ClassificationTool.classifier
-    end
-
     def create
       classifier.groups.create_group(
         "name" => NAME,
@@ -88,15 +127,13 @@ module ClassificationTool
       )
     end
 
-    def id
-      classifier.groups.get_group_id(NAME)
-    end
-
     def remove
       classifier.groups.delete_group(id)
     end
 
-    def update(agent_version)
+    def update(agent_version = nil)
+      ClassificationTool.usage unless agent_version
+
       classes = CLASSES.inject({}) do |hash,row|
 	hash[row[0]] = { "agent_version" => agent_version }
 	hash
@@ -108,28 +145,45 @@ module ClassificationTool
       )
     end
 
-    def show
-      require 'pp'
-      pp classifier.groups.get_group(id)
+    private
+
+    def _name
+      NAME
+    end
+  end
+
+  class CompileMaster < Command
+    NAME = "PE Master"
+
+    def install(compile_master_hostname = nil)
+      ClassificationTool.usage unless compile_master_hostname
+
+      current_group = classifier.groups.get_group(id)
+      new_rule = current_group["rule"] + [[ '=', 'name', compile_master_hostname ]]
+
+      classifier.groups.update_group(
+        "id" => id,
+        "rule" => new_rule,
+      )
+    end
+
+    private
+
+    def _name
+      NAME
     end
   end
 end
+command = ARGV.shift
+subcommand = ARGV.shift
 
-if ARGV.empty?
-  puts "USAGE: ruby pe_repo.rb <command>"
-  puts <<-EOS
-  commands:
-    create - create a group '#{ClassificationTool::PERepo::NAME}' with the
-             initial pe_repo classes for the master for all platforms
-    remove - remove this group
-    update <agent_version> - update all classe in the group to <agent_version>
-  EOS
-  exit 1
+tool = case command
+when 'perepo' then
+  ClassificationTool::PERepo.new
+when 'compile' then
+  ClassificationTool::CompileMaster.new
+else
+  ClassificationTool.usage
 end
 
-command = ARGV.shift
-version = ARGV.shift
-pe_repo = ClassificationTool::PERepo.new
-version ?
-  pe_repo.send(command, version) :
-  pe_repo.send(command)
+tool.dispatch(subcommand, *ARGV)
