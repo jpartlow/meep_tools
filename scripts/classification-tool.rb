@@ -24,6 +24,9 @@ module ClassificationTool
         subcommands:
           install <compile-master-hostname> - install a compile master on the given host
             ex: `classification-tool.rb compile install pe-201520-agent.puppetdebug.vlan`
+          add_platforms <platform1> <platform2> - add just the given platforms
+            ex: `classification-tool.rb perepo add_platforms el_7_x86_64 ubuntu_1404_amd64`
+            ex: (must match the pe_repo::platform::<class>)
     EOS
     exit 1
   end
@@ -167,6 +170,23 @@ module ClassificationTool
       )
     end
 
+    def add_platforms(*platforms)
+      ClassificationTool.usage if platforms.empty?
+
+      classes = platforms.inject({}) do |hash,platform|
+        hash["pe_repo::platform::#{platform}"] = {}
+        hash
+      end
+
+      current_group = classifier.groups.get_group(id)
+      new_classes = current_group["classes"].merge(classes)
+
+      classifier.groups.update_group(
+	"id" => id,
+	"classes" => new_classes
+      )
+    end
+
     private
 
     def _name
@@ -174,6 +194,7 @@ module ClassificationTool
     end
   end
 end
+
 command = ARGV.shift
 subcommand = ARGV.shift
 

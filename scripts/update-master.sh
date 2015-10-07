@@ -1,6 +1,6 @@
 #! /bin/bash
 set -e
-set -x
+#set -x
 
 master=$1
 SRC_DIR=/home/jpartlow/work/src/pl/pe-modules
