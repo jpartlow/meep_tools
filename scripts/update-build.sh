@@ -1,16 +1,22 @@
 set -e
+#set -x
 
 . common.sh
 
 SRC_DIR=~/work/src/pl
 pushd pe_builds > /dev/null
-BUILD=$(find -type d -name "puppet-enterprise-${FULL_VER?}-*-${PLATFORM_STRING?}*" -printf "%f\n" | sort | tail -n1)
+if [ -z "$BUILD" ]; then
+    # There is no dev build, so try the exact version match.
+    BUILD=$(find -type d -name "puppet-enterprise-${FULL_VER?}-${PLATFORM_STRING?}*" -printf "%f\n" | sort | tail -n1)
+fi
 echo "BUILD: $BUILD"
 popd > /dev/null
 REV=${BUILD%%-${PLATFORM_STRING?}*}
 REV=${REV##puppet-enterprise*-g}
-echo "$BUILD"
-echo "$REV"
+if [[ "$REV" =~ puppet-enterprise ]]; then
+    REV=${REV##puppet-enterprise-}
+fi
+echo "REV: $REV"
 
 # reset files
 cd pe_builds
@@ -26,6 +32,9 @@ for module_name in 'puppetlabs-puppet_enterprise' 'puppetlabs-pe_repo'; do
   t_module_file_name=$(basename "${t_module_file?}")
   MOD_REV=${t_module_file%%.tar.gz}
   MOD_REV=${MOD_REV##*${module_name?}*-g}
+  echo "t_module_file: $t_module_file"
+  echo "t_module_file_name: $t_module_file_name"
+  echo "MOD_REV: $MOD_REV"
   pushd "$SRC_DIR/${module_name?}" > /dev/null
   LOCAL_MOD_REV=$(git rev-parse HEAD)
   if git merge-base --is-ancestor "$MOD_REV" "$LOCAL_MOD_REV" && [ "$(git rev-parse "$MOD_REV")" != "$LOCAL_MOD_REV" ]; then
