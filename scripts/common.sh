@@ -20,9 +20,11 @@ esac
 PLATFORM_VERSION=${PLATFORM_VERSION:-${defaults[1]}}
 ARCH=${ARCH:-$default_arch}
 PLATFORM_STRING="${PLATFORM?}-${PLATFORM_VERSION?}-${ARCH?}"
+BUILD=$(find -type d -name "puppet-enterprise-${FULL_VER?}-*-${PLATFORM_STRING?}*" -printf "%f\n" | sort | tail -n1)
 echo "VER: $VER"
 echo "FULL_VER: $FULL_VER"
 echo "PLATFORM_STRING: $PLATFORM_STRING"
+echo "BUILD: $BUILD"
 
 ensure_rsync() {
     _platform=${1?}
@@ -45,6 +47,8 @@ ssh_on() {
     _host=${1?}
     _command=${2?}
 
+    echo "--> ($_host)# $_command"
+
     if [[ "$_host" =~ .*\.puppetdebug\.vlan ]]; then
         _hostname=${_host%%.*}
         pwd
@@ -61,9 +65,9 @@ rsync_on() {
     _target=${3}
 
     if [[ "$_host" =~ .*\.puppetdebug\.vlan ]]; then
-        _port=$(vagrant ssh-config pe-201520-master | grep Port | grep -oE '[0-9]+')
-        rsync --progress -rLptgoD -e "ssh -p $_port" $_source root@localhost:${_target}
+        _port=$(vagrant ssh-config ${_host%%.*} | grep Port | grep -oE '[0-9]+')
+        rsync --progress -rLptgoD -e "ssh -o StrictHostKeyChecking=false -p $_port" $_source root@localhost:${_target}
     else
-        rsync --progress -a $_source root@${_host}:${_target}
+        rsync --progress -rLptgOD $_source root@${_host}:${_target}
     fi
 }
