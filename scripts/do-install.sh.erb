@@ -15,6 +15,13 @@ BUILD=$(ls -d puppet-enterprise-2016.1.0-*-${PLATFORM_STRING?}* | tail -n1)
 BUILD=${BUILD%.tar.gz}
 cd "$BUILD"
 
+# copy over hieradata defaults if present (typically for memory constraints)
+if [ -d /vagrant/hieradata ]; then
+  hieradata_dir=/etc/puppetlabs/code/environments/production/hieradata
+  mkdir -p "${hieradata_dir?}"
+  cp /vagrant/hieradata/*.yaml "${hieradata_dir?}"
+fi
+
 ./puppet-enterprise-installer -a "/vagrant/answers/split-${node?}.answers.txt" "$@" 2>&1 | tee "/vagrant/install-${node?}.log"
 
 echo "** Installer exited with code: ${PIPESTATUS[0]}"
