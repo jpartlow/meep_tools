@@ -13,16 +13,23 @@ vagrant_configs = vagrant_ids.inject({}) do |hash,id_file|
   hash
 end
 
+errors = []
 vboxes.each do |dir,uuid|
   path = "/home/jpartlow/VirtualBox\ VMs/#{dir}"
   vagrant_config = vagrant_configs[uuid]
   if !Dir.exists?(path)
-    puts "* No virtualbox folder found at #{path} for #{uuid}"
+    errors << "**********************"
+    errors << "* No virtualbox folder found at #{path} for #{uuid}"
+    errors << "**********************"
   end
 
   if vagrant_config.nil?
-    puts "! No vagrant configuration found for this #{path} for #{uuid}" 
+    errors << "!!!!!!!!!!!!!!!!!!!!!!"
+    errors << "! No vagrant configuration found for this #{path} for #{uuid}"
+    errors << "!!!!!!!!!!!!!!!!!!!!!!"
   else
-    puts "Found #{vagrant_config} for #{uuid} matching #{path}" 
-  end 
+    puts "Found #{vagrant_config} for #{uuid} matching #{path}"
+  end
 end
+
+errors.each { |e| puts e }
