@@ -1,17 +1,23 @@
 set -e
 set -x
 
-node=$1
-if [ -z "$node" ]; then
-  echo "Usage: do-install.sh <node-name>"
+version=$1
+node=$2
+if [ -z "$node" -o -z "$version" ]; then
+  echo "Usage: do-install.sh <version> <node-name>"
+  echo "  version: 2016.1.0"
   echo "  node-name: (master, console, puppetdb)"
   exit 1
 fi
 shift
+shift
 
 cd /pe_builds
 PLATFORM_STRING='<%=platform_string%>'
-BUILD=$(ls -d puppet-enterprise-2016.1.0-*-${PLATFORM_STRING?}* | tail -n1)
+BUILD=$(ls -d puppet-enterprise-${version?}-*-${PLATFORM_STRING?}* | tail -n1)
+if [ -z "$BUILD" ]; then
+  BUILD="puppet-enterprise-${version?}-${PLATFORM_STRING?}"
+fi
 BUILD=${BUILD%.tar.gz}
 cd "$BUILD"
 
