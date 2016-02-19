@@ -1,5 +1,5 @@
 cd /pe_builds
-PLATFORM_STRING='ubuntu-14.04-amd64'
+PLATFORM_STRING='<%=platform_string%>'
 BUILD=$(ls -d puppet-enterprise-4.0.0-*-${PLATFORM_STRING?}* | tail -n1)
 BUILD=${BUILD%.tar.gz}
 cd "$BUILD"

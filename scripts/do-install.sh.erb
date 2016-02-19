@@ -1,0 +1,20 @@
+set -e
+set -x
+
+node=$1
+if [ -z "$node" ]; then
+  echo "Usage: do-install.sh <node-name>"
+  echo "  node-name: (master, console, puppetdb)"
+  exit 1
+fi
+shift
+
+cd /pe_builds
+PLATFORM_STRING='<%=platform_string%>'
+BUILD=$(ls -d puppet-enterprise-2016.1.0-*-${PLATFORM_STRING?}* | tail -n1)
+BUILD=${BUILD%.tar.gz}
+cd "$BUILD"
+
+./puppet-enterprise-installer -a "/vagrant/answers/split-${node?}.answers.txt" "$@" 2>&1 | tee "/vagrant/install-${node?}.log"
+
+echo "** Installer exited with code: ${PIPESTATUS[0]}"

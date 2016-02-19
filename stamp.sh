@@ -14,18 +14,19 @@ if [[ -z $platform || -z $version || -z $mono_or_split ]]; then
     exit 1
 fi
 
-repodir="$platform-$mono_or_split"
-mkdir -p $version
 
-cd $version
+repodir="$platform-$mono_or_split"
+mkdir -p "$version"
+
+cd "$version"
 if [ ! -e "$repodir/.git" ]; then
-  git clone git@github.com:jpartlow/puppet-debugging-kit $repodir
-  pushd $repodir
+  git clone git@github.com:jpartlow/puppet-debugging-kit "$repodir"
+  pushd "$repodir"
   git checkout integration
   popd
 fi
 
-cd $repodir
+cd "$repodir"
 
 if [ ! -e src/puppetlabs ]; then
   echo "* linking src"
@@ -39,11 +40,32 @@ if [ ! -e pe_builds ]; then
   ln -s /home/jpartlow/.vagrant.d/pe_builds pe_builds
 fi
 for script in /home/jpartlow/work/virtual/scripts/*.{sh,rb}; do
-  scriptname=$(basename $script)
+  scriptname=$(basename "$script")
   if [ ! -e "$scriptname" ]; then
     echo "* linking $script"
-    ln -s $script $scriptname
+    ln -s "$script" "$scriptname"
   fi
+done
+. common.sh
+echo "${PLATFORM_STRING?}"
+for template in /home/jpartlow/work/virtual/scripts/*.erb; do
+  scriptname=$(basename "$template")
+  scriptname=${scriptname%%.erb}
+  if [ ! -e "${scriptname?}" ]; then
+    echo "* expanding ${template?} => ${scriptname?}"
+    rubyscript="
+      require 'erb'
+      template = File.read('${template?}')
+      e = ERB.new(template)
+      platform_string='${PLATFORM_STRING?}'
+      File.open('${scriptname?}', 'w') do |script|
+        script.puts(e.result(binding))
+      end
+    "
+    echo "${rubyscript?}"
+    ruby -e "${rubyscript?}"
+  fi
+  chmod 755 "${scriptname?}"
 done
 
 # generate an ssh key to be added to vm root .ssh for split installs using higgs
