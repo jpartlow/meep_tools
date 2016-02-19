@@ -13,6 +13,11 @@ fi
 
 ensure_rsync $PLATFORM $target
 
-ruby_bin='/opt/puppetlabs/puppet/bin'
+echo "VER: ${VER}"
+if (( ${VER%%.*} < 4 )); then
+    ruby_bin='/opt/puppet/bin'
+else
+    ruby_bin='/opt/puppetlabs/puppet/bin'
+fi
 ssh_on $target "${ruby_bin?}/gem install puppetclassify"
 rsync_on $target ./classification-tool.rb /usr/local/bin
