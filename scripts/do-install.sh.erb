@@ -16,7 +16,7 @@ BUILD=${BUILD%.tar.gz}
 cd "$BUILD"
 
 # copy over hieradata defaults if present (typically for memory constraints)
-if [ -d /vagrant/hieradata ]; then
+if [ 'master' = '${node}' -a -d /vagrant/hieradata ]; then
   hieradata_dir=/etc/puppetlabs/code/environments/production/hieradata
   mkdir -p "${hieradata_dir?}"
   cp /vagrant/hieradata/*.yaml "${hieradata_dir?}"
