@@ -6,7 +6,7 @@ require 'pp'
 module ClassificationTool
 
   def self.usage
-    puts "USAGE: classifcation-tool.rb <command> <subcommand>"
+    puts "USAGE: classification-tool.rb <command> <subcommand>"
     puts <<-EOS
     commands:
 
@@ -17,22 +17,40 @@ module ClassificationTool
                    initial pe_repo classes for the master for all platforms
           remove - remove this group
           update <agent_version> - update all classes in the group to <agent_version>
-          show   - lit the pe_repo classes
+          show   - list the pe_repo classes
 
       compile:
 
         subcommands:
-          install <compile-master-hostname> - install a compile master on the given host
+          install <compile-master-hostname> - add the given host to the list of
+            masters in PE Master group
             ex: `classification-tool.rb compile install pe-201520-agent.puppetdebug.vlan`
+          remove <compile-master-hostname> - remove the host from the list of masters
           add_platforms <platform1> <platform2> - add just the given platforms
-            ex: `classification-tool.rb perepo add_platforms el_7_x86_64 ubuntu_1404_amd64`
+            ex: `classification-tool.rb compile add_platforms el_7_x86_64 ubuntu_1404_amd64`
             ex: (must match the pe_repo::platform::<class>)
+          remove_platforms <platform1> <platform2> - remove the given pe_repo platforms
+          show - the PE Master group configuration
+
+      general:
+
+        subcommands:
+          list - list all group names and ids
+            ex: `classification-tool.rb general list
+          query <group_name> - show the state of the given group
+            ex: `classification-tool.rb general query 'PE Infrastructure'`
+          update <group_name> <class_name> <parameter> <value>
+            ex: `classification-tool.rb general update 'PE Master' puppet_enterprise::profile::master r10k_remote git@github.com:puppetlabs/pe_acceptance_tests-control.git
     EOS
     exit 1
   end
 
   def self.hostname
-    @hostname ||= `/opt/puppetlabs/bin/facter fqdn`.strip
+    @hostname ||= if File.exist?('/opt/puppetlabs/bin')
+      `/opt/puppetlabs/bin/facter fqdn`.strip
+                  else
+      `/opt/puppet/bin/facter fqdn`.strip
+                  end
   end
 
   def self.classifier_hostname
@@ -65,12 +83,45 @@ module ClassificationTool
       send(subcommand, *args)
     end
 
-    def id
-      classifier.groups.get_group_id(_name)
+    def id(name = _name)
+      classifier.groups.get_group_id(name)
     end
 
-    def show
-      pp classifier.groups.get_group(id)
+    def show(group_id = id)
+      pp get_group(group_id)
+    end
+
+    def get_group(group_id = id)
+      classifier.groups.get_group(group_id)
+    end
+
+    def update_group(hash, group_id = id)
+      classifier.groups.update_group(
+        hash.merge("id" => group_id)
+      )
+      puts "Done!"
+      show(group_id)
+    end
+  end
+
+  class General < Command
+    def query(group_name)
+      group_id = id(group_name)
+      pp get_group(group_id)
+    end
+
+    def list
+      pp classifier.groups.get_groups.map { |h| h['name'] }
+    end
+
+    def update(group_name, pe_class, parameter, value)
+      group_id = id(group_name)
+      current_group = get_group(group_id)
+      new_classes = current_group["classes"]
+      new_classes[pe_class].merge!(parameter => value)
+      hash = { 'classes' => new_classes }
+      pp hash
+      update_group(hash, group_id)
     end
   end
 
@@ -99,6 +150,7 @@ module ClassificationTool
       #    "pe_repo::platform::fedora_22_i386" => {},
       #    "pe_repo::platform::fedora_22_x86_64" => {},
           "pe_repo::platform::osx_1010_x86_64" => {},
+
           "pe_repo::platform::osx_109_x86_64" => {},
           "pe_repo::platform::sles_10_i386" => {},
           "pe_repo::platform::sles_10_x86_64" => {},
@@ -142,10 +194,7 @@ module ClassificationTool
 	hash
       end
 
-      classifier.groups.update_group(
-	"id" => id,
-	"classes" => classes
-      )
+      update_group("classes" => classes)
     end
 
     private
@@ -161,13 +210,19 @@ module ClassificationTool
     def install(compile_master_hostname = nil)
       ClassificationTool.usage unless compile_master_hostname
 
-      current_group = classifier.groups.get_group(id)
+      current_group = get_group
       new_rule = current_group["rule"] + [[ '=', 'name', compile_master_hostname ]]
 
-      classifier.groups.update_group(
-        "id" => id,
-        "rule" => new_rule,
-      )
+      update_group("rule" => new_rule)
+    end
+
+    def remove(compile_master_hostname = nil)
+      ClassificationTool.usage unless compile_master_hostname
+
+      current_group = get_group
+      new_rule = current_group["rule"].reject { |r| r[2] == compile_master_hostname }
+
+      update_group("rule" => new_rule)
     end
 
     def add_platforms(*platforms)
@@ -178,13 +233,24 @@ module ClassificationTool
         hash
       end
 
-      current_group = classifier.groups.get_group(id)
+      current_group = get_group
       new_classes = current_group["classes"].merge(classes)
 
-      classifier.groups.update_group(
-	"id" => id,
-	"classes" => new_classes
-      )
+      update_group("classes" => new_classes)
+    end
+
+    def remove_platforms(*platforms)
+      ClassificationTool.usage if platforms.empty?
+
+      current_group = get_group
+      new_classes = current_group["classes"]
+      new_classes.each do |pe_repo_class,hash|
+        if platforms.any? { |platform| pe_repo_class =~ /#{platform}/ }
+          new_classes[pe_repo_class] = nil
+        end
+      end
+
+      update_group("classes" => new_classes)
     end
 
     private
@@ -203,6 +269,8 @@ when 'perepo' then
   ClassificationTool::PERepo.new
 when 'compile' then
   ClassificationTool::CompileMaster.new
+when 'general' then
+  ClassificationTool::General.new
 else
   ClassificationTool.usage
 end
