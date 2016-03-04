@@ -16,6 +16,10 @@ fi
 BUILD=${BUILD%.tar.gz}
 cd "$BUILD"
 
-./puppet-enterprise-installer "$@" 2>&1 | tee "/vagrant/upgrade-${version?}-${node?}"
+if [ ! -e ./upgrade-answers.txt ]; then
+  echo 'q_install=y' > ./upgrade-answers.txt
+fi
+
+./puppet-enterprise-installer -a ./upgrade-answers.txt "$@" 2>&1 | tee "/vagrant/upgrade-${version?}-${node?}"
 
 echo "** Installer exited with code: ${PIPESTATUS[0]}"
