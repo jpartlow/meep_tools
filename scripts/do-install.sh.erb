@@ -1,12 +1,12 @@
 set -e
-set -x
+#set -x
 
 version=$1
 node=$2
 if [ -z "$node" -o -z "$version" ]; then
   echo "Usage: do-install.sh <version> <node-name>"
   echo "  version: 2016.1.0"
-  echo "  node-name: (master, console, puppetdb)"
+  echo "  node-name: (mono or all, or master, console, puppetdb)"
   exit 1
 fi
 shift
@@ -22,12 +22,22 @@ BUILD=${BUILD%.tar.gz}
 cd "$BUILD"
 
 # copy over hieradata defaults if present (typically for memory constraints)
-if [ 'master' = '${node}' -a -d /vagrant/hieradata ]; then
+if [ 'master' = "${node?}" -a -d /vagrant/hieradata ]; then
   hieradata_dir=/etc/puppetlabs/code/environments/production/hieradata
   mkdir -p "${hieradata_dir?}"
   cp /vagrant/hieradata/*.yaml "${hieradata_dir?}"
 fi
 
-./puppet-enterprise-installer -a "/vagrant/answers/split-${node?}.answers.txt" "$@" 2>&1 | tee "/vagrant/install-${node?}.log"
+# pick answer file
+case "${node?}" in
+  all | mono)
+    answer_file="/vagrant/answers/all-in-one.answers.txt"
+    ;;
+  *)
+    answer_file="/vagrant/answers/split-${node?}.answers.txt"
+    ;;
+esac
+
+./puppet-enterprise-installer -a "${answer_file?}" "$@" 2>&1 | tee "/vagrant/install-${node?}.log"
 
 echo "** Installer exited with code: ${PIPESTATUS[0]}"
