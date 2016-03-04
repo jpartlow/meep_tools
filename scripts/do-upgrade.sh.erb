@@ -1,7 +1,8 @@
 version=$1
+node=$2
 if [ -z "$node" -o -z "$version" ]; then
-  echo "Usage: do-upgrade.sh <version>"
-  echo "  version: 2016.2.0"
+  echo "Usage: do-upgrade.sh <version> <node>"
+  echo "  version: 2016.2.0 master"
   exit 1
 fi
 shift
@@ -15,6 +16,6 @@ fi
 BUILD=${BUILD%.tar.gz}
 cd "$BUILD"
 
-./puppet-enterprise-installer "$@" 2>&1 | tee /vagrant/debug.log
+./puppet-enterprise-installer "$@" 2>&1 | tee "/vagrant/upgrade-${version?}-${node?}"
 
 echo "** Installer exited with code: ${PIPESTATUS[0]}"
