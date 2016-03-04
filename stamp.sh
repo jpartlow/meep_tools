@@ -51,20 +51,18 @@ echo "${PLATFORM_STRING?}"
 for template in /home/jpartlow/work/virtual/scripts/*.erb; do
   scriptname=$(basename "$template")
   scriptname=${scriptname%%.erb}
-  if [ ! -e "${scriptname?}" ]; then
-    echo "* expanding ${template?} => ${scriptname?}"
-    rubyscript="
-      require 'erb'
-      template = File.read('${template?}')
-      e = ERB.new(template)
-      platform_string='${PLATFORM_STRING?}'
-      File.open('${scriptname?}', 'w') do |script|
-        script.puts(e.result(binding))
-      end
-    "
-    echo "${rubyscript?}"
-    ruby -e "${rubyscript?}"
-  fi
+  echo "* expanding ${template?} => ${scriptname?}"
+  rubyscript="
+    require 'erb'
+    template = File.read('${template?}')
+    e = ERB.new(template)
+    platform_string='${PLATFORM_STRING?}'
+    File.open('${scriptname?}', 'w') do |script|
+      script.puts(e.result(binding))
+    end
+  "
+#  echo "${rubyscript?}"
+  ruby -e "${rubyscript?}"
   chmod 755 "${scriptname?}"
 done
 
