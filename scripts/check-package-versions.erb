@@ -1,0 +1,61 @@
+#! /opt/puppetlabs/puppet/bin/ruby
+
+require 'json'
+
+def exit_with(message)
+  puts message
+  exit 1
+end
+
+unless installation_dir=ARGV.shift
+  exit_with "Usage: check-package-versions.rb /path/to/unpacked/installer"
+end
+
+packages = {}
+platform = `facter -p platform_tag`.chomp
+
+puts "grab packages.json from master host PE tarball"
+
+# grab packages.json from the master and use that as a source of truth. The file comes from
+# the PE tarball, and compile masters and amq hub and spokes won't have it.
+json=%x{cat #{installation_dir}/packages/#{platform}-package-versions.json}
+packages = JSON.parse(json)
+exit_with("Could not parse package-versions.json.") if packages.length == 0
+
+puts "Verify PE Package versions"
+variant, version, arch = platform.split("-")
+case variant
+when /^(el|centos|sles)$/
+  cmd = "rpm -q --qf '%{version}'"
+when /^(debian|ubuntu)$/
+  cmd = "dpkg-query -W --showformat='${Version}'"
+else
+  raise "got unknown platform: #{platform}"
+end
+
+installed_versions = []
+not_installed = []
+diff_versions = []
+
+packages.each do |name, metadata|
+  installed_package_check_result = %x{#{cmd} #{name}}
+  if $? == 0 && installed_package_check_result != ''
+    expected_version = metadata['version'].split(/-/).first
+    installed_version = installed_package_check_result.split(/-/).first
+    installed_versions << "#{name} is at #{installed_version}" if installed_version == expected_version
+    diff_versions << "#{name} is at #{installed_version}. Expected #{expected_version}" if installed_version != expected_version
+  else
+    not_installed << "#{name} is not installed: #{installed_package_check_result}"
+  end
+end
+
+require 'pp'
+puts "installed\n#{installed_versions.pretty_inspect}"
+puts "not_installed\n#{not_installed.pretty_inspect}"
+puts "diff_versions\n#{diff_versions.pretty_inspect}"
+
+if installed_versions.length == 0
+  exit_with "No installed packages were found."
+elsif diff_versions.length > 0
+  exit_with "Differing versions were found between installed packages and package-versions.json."
+end
