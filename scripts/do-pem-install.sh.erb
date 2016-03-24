@@ -1,0 +1,38 @@
+set -e
+#set -x
+
+while getopts p:D name; do
+  case "$name" in
+    D)
+        IS_DEBUG='true'
+        ;;
+    p)
+        path="${OPTARG?}"
+        ;;
+  esac
+done
+
+if [ -z "${path}" ]; then
+  path=/puppetlabs/enterprise-dist/dists
+fi
+
+build_dir=($(find "${path?}" -type d -name 'puppet-enterprise*'))
+if [ -z "${build_dir?}" ]; then
+  build_dir="${path?}"
+elif [[ ${#build_dir[@]} -gt 1 ]]; then
+  ls -d "${path?}"
+  echo "** Multiple installer directories in ${path?}.  You will need to specify one."
+fi
+
+if [ -f /vagrant/hieradata/common.conf ]; then
+  conf_file=/vagrant/hieradata/common.conf
+else
+  conf_file=conf.d/common.conf
+fi
+
+pushd "${build_dir?}/pe-manager"
+  build=$(basename "${build_dir?}")
+  [ "${IS_DEBUG}" = "true" ] && debug_flag='-D'
+  ./puppet-enterprise-installer -c "${conf_file}" "${debug_flag}" 2>&1 | tee "/vagrant/install-pem-${build?}.log"
+  echo "** Installer exited with code: ${PIPESTATUS[0]}"
+popd
