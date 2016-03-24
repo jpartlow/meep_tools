@@ -118,7 +118,13 @@ module ClassificationTool
       group_id = id(group_name)
       current_group = get_group(group_id)
       new_classes = current_group["classes"]
-      new_classes[pe_class].merge!(parameter => value)
+      cast_value = case value
+                   when "null" then nil
+                   when "true" then true
+                   when "false" then false
+                   else value
+                   end
+      new_classes[pe_class].merge!(parameter => cast_value)
       hash = { 'classes' => new_classes }
       pp hash
       update_group(hash, group_id)
