@@ -38,9 +38,9 @@ end
 
 rollback = hosts  & running
 puts "Rolling back: #{rollback.pretty_inspect}  to: #{snapshot_name}"
-print "Ok? (y/N) "
-answer = STDIN.gets.chomp
-exit unless answer == "y"
+#print "Ok? (y/N) "
+#answer = STDIN.gets.chomp
+#exit unless answer == "y"
 
 system("vagrant snap rollback #{rollback.join(' ')} --name=#{snapshot_name}")
 rollback.each do |host|
