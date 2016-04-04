@@ -17,11 +17,14 @@ if [ -z "${path}" ]; then
 fi
 
 build_dir=($(find "${path?}" -type d -name 'puppet-enterprise*'))
-if [ -z "${build_dir?}" ]; then
-  build_dir="${path?}"
+if [ -z "${build_dir[0]}" ]; then
+  ls -d "${path?}"
+  echo "** No installer directory found in ${path?}."
+  exit 1
 elif [[ ${#build_dir[@]} -gt 1 ]]; then
   ls -d "${path?}"
   echo "** Multiple installer directories in ${path?}.  You will need to specify one."
+  exit 1
 fi
 
 if [ -f /vagrant/hieradata/common.conf ]; then
