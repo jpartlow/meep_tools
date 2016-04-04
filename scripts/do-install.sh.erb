@@ -38,6 +38,6 @@ case "${node?}" in
     ;;
 esac
 
-./puppet-enterprise-installer -a "${answer_file?}" "$@" 2>&1 | tee "/vagrant/install-${node?}.log"
+time ./puppet-enterprise-installer -a "${answer_file?}" "$@" 2>&1 | tee "/vagrant/install-${node?}.log"
 
 echo "** Installer exited with code: ${PIPESTATUS[0]}"
