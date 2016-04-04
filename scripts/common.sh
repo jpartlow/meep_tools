@@ -56,7 +56,7 @@ ssh_on() {
     else
         # accept master's host key since it's just a qa vm
         ssh -o StrictHostKeyChecking=no root@${_host} "$_command"
-    fi    
+    fi
 }
 
 rsync_on() {
@@ -71,3 +71,21 @@ rsync_on() {
         rsync --progress -rLptgOD $_source root@${_host}:${_target}
     fi
 }
+
+get_hostnames() {
+  if [ -n "$master" ]; then
+    exit 0
+  fi
+  hosts=$(vagrant hosts list)
+
+  master=$(grep -Eo 'pe-[0-9]+-master\.[a-z.]+' <<< "$hosts")
+  db=$(grep -Eo 'pe-[0-9]+-db\.[a-z.]+' <<< "$hosts")
+  console=$(grep -Eo 'pe-[0-9]+-console\.[a-z.]+' <<< "$hosts")
+  agent=$(grep -Eo 'pe-[0-9]+-agent\.[a-z.]+' <<< "$hosts")
+
+  echo "master: $master"
+  echo "db: $db"
+  echo "console: $console"
+  echo "agent: $agent"
+}
+
