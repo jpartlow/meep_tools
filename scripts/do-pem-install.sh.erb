@@ -30,9 +30,11 @@ else
   conf_file=conf.d/common.conf
 fi
 
+host=$(hostname -s)
+
 pushd "${build_dir?}/pe-manager"
   build=$(basename "${build_dir?}")
   [ "${IS_DEBUG}" = "true" ] && debug_flag='-D'
-  ./puppet-enterprise-installer -c "${conf_file}" "${debug_flag}" 2>&1 | tee "/vagrant/install-pem-${build?}.log"
+  ./puppet-enterprise-installer -c "${conf_file}" "${debug_flag}" 2>&1 | tee "/vagrant/install-pem-${host}-${build?}.log"
   echo "** Installer exited with code: ${PIPESTATUS[0]}"
 popd
