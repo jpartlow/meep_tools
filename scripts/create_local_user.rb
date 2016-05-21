@@ -8,9 +8,13 @@ class PEUser
   attr_accessor :console, :console_hostname, :platform, :user_name, :password
   attr_reader :body
 
-  def initialize(console_hostname, platform, user_name, password)
+  def initialize(console_hostname, platform, user_name, password, ssh_key, ssh_port)
     self.console_hostname = console_hostname
     self.platform = Beaker::Platform.new(platform)
+    keys = [
+      "~/.ssh/id_rsa-acceptance"
+    ]
+    keys << ssh_key
     self.console = Beaker::Host.create(
       console_hostname, 
       { 
@@ -22,11 +26,9 @@ class PEUser
           "auth_methods" => [
               "publickey"
           ],
-          "port" => 22,
+          "port" => ssh_port,
           "forward_agent" => true,
-          "keys" => [
-              "~/.ssh/id_rsa-acceptance"
-          ],
+          "keys" => keys,
           "user_known_hosts_file" => "~/.ssh/known_hosts",
         },
       },
@@ -61,16 +63,18 @@ def usage
 end
 
 console_hostname = ARGV[0]
-command   = ARGV[1]
-platform  = ARGV[2] || 'el-7-x86_64'
-user_name = ARGV[3] || 'auser'
-password  = ARGV[4] || 'password'
+command    = ARGV[1]
+platform   = ARGV[2] || 'el-7-x86_64'
+user_name  = ARGV[3] || 'auser'
+password   = ARGV[4] || 'password'
+ssh_key    = ARGV[5]
+ssh_port   = ARGV[6] || 22
 
 unless console_hostname
   usage
 end
 
-pe_user = PEUser.new(console_hostname, platform, user_name, password)
+pe_user = PEUser.new(console_hostname, platform, user_name, password, ssh_key, ssh_port)
 
 case command
   when 'create' then pe_user.generate_user
