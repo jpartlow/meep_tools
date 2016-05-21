@@ -9,7 +9,7 @@ if [ -z "$version" ]; then
     echo "    install - puppet-enterprise-installer"
     echo "    secondrun - secondary puppet agent run on nodes"
     echo "    agent - install agent and sign cert"
-    echo "    snapshot - snapshot vms" 
+    echo "    snapshot - snapshot vms"
     exit 1
 fi
 shift
@@ -39,21 +39,26 @@ agent() {
   ssh_on "$agent" "/opt/puppetlabs/puppet/bin/puppet agent -t"
 }
 
+classifier() {
+  inject-classification-tool.sh "${master}"
+}
+
 snapshot() {
   vagrant snap delete --name "pe-$version-installed"
   vagrant snap take --name "pe-$version-installed"
 }
 
-for stage in "${@:-all}"; do 
+for stage in "${@:-all}"; do
   case $stage in
     all)
       provision
       install
       secondrun
       agent
+      classifier
       snapshot
       ;;
-    provision | install | secondrun | agent | snapshot)
+    provision | install | secondrun | agent | classifier | snapshot)
       eval "$stage"
       ;;
   esac
