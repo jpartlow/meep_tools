@@ -74,7 +74,7 @@ rsync_on() {
 
 get_hostnames() {
   if [ -n "$master" ]; then
-    exit 0
+    return 0
   fi
   hosts=$(vagrant hosts list)
 
