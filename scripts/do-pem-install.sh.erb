@@ -35,7 +35,7 @@ fi
 
 host=$(hostname -s)
 
-pushd "${build_dir?}/pe-manager"
+pushd "${build_dir?}"
   build=$(basename "${build_dir?}")
   [ "${IS_DEBUG}" = "true" ] && debug_flag='-D'
   time ./puppet-enterprise-installer -c "${conf_file}" "${debug_flag}" 2>&1 | tee "/vagrant/install-pem-${host}-${build?}.log"
