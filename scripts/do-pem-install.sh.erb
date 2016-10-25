@@ -33,6 +33,12 @@ else
   conf_file=conf.d/common.conf
 fi
 
+if [ -f /vagrant/hieradata/common.yaml ]; then
+  production_hieradata=/etc/puppetlabs/code/environments/production/hieradata
+  mkdir -p $production_hieradata
+  cp /vagrant/hieradata/common.yaml $production_hieradata
+fi
+
 host=$(hostname -s)
 
 pushd "${build_dir?}"
