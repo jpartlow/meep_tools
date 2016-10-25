@@ -1,80 +1,85 @@
-#! /usr/bin/env ruby
-require 'scooter'
-require 'beaker'
-include Scooter::HttpDispatchers
+#! /opt/puppetlabs/puppet/bin/ruby
+require 'net/http'
+require 'openssl'
+require 'json'
 
 class PEUser
 
-  attr_accessor :console, :console_hostname, :platform, :user_name, :password
+  attr_accessor :console, :console_hostname, :user_name, :password
   attr_reader :body
 
-  def initialize(console_hostname, platform, user_name, password, ssh_key, ssh_port)
+  def initialize(console_hostname, user_name, password)
     self.console_hostname = console_hostname
-    self.platform = Beaker::Platform.new(platform)
-    keys = [
-      "~/.ssh/id_rsa-acceptance"
-    ]
-    keys << ssh_key
-    self.console = Beaker::Host.create(
-      console_hostname, 
-      { 
-        :logger => Beaker::Logger.new,
-        :platform => self.platform,
-        :ssh => {
-          "config" => false,
-          "paranoid" => false,
-          "auth_methods" => [
-              "publickey"
-          ],
-          "port" => ssh_port,
-          "forward_agent" => true,
-          "keys" => keys,
-          "user_known_hosts_file" => "~/.ssh/known_hosts",
-        },
-      },
-      {})
     self.user_name = user_name
     self.password = password 
   end
 
   def dispatcher
-    @dispatcher ||= ConsoleDispatcher.new(console)
+    if @dispatcher.nil?
+      fqdn = (`facter fqdn`).strip
+      @dispatcher = Net::HTTP.new(console_hostname, 4433)
+      @dispatcher.use_ssl = true
+      ca_cert_path = '/etc/puppetlabs/puppet/ssl/certs/ca.pem'
+      cert_path = "/etc/puppetlabs/puppet/ssl/certs/#{fqdn}.pem"
+      key_path = "/etc/puppetlabs/puppet/ssl/private_keys/#{fqdn}.pem"
+      @dispatcher.ca_file = ca_cert_path
+      @dispatcher.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      @dispatcher.cert = OpenSSL::X509::Certificate.new(File.read(cert_path))
+      @dispatcher.key  = OpenSSL::PKey::RSA.new(File.read(key_path), nil)
+#      @dispatcher.set_debug_output($stderr)
+    end
+    @dispatcher
   end
-  
+
+  def get_admin_user
+    response = dispatcher.get('/rbac-api/v1/users/current')
+    raise(RuntimeError, response) unless response.code == '200'
+    JSON.parse(response.body)
+  end
+
+  def get_users
+    response = dispatcher.get('/rbac-api/v1/users')
+    raise(RuntimeError, response) unless response.code == '200'
+    JSON.parse(response.body)
+  end
+
   def generate_user
-    existing_admin = dispatcher.get_current_user_data
-    @body = dispatcher.create_local_user({
+    existing_admin = get_admin_user
+    user_hash = {
       "login" => user_name,  
       "email" => "#{user_name}@example.com",
       "display_name" => "Test user #{user_name}",
       "role_ids" => existing_admin['role_ids'],
       "password" => password
-      }).body
+    }
+    response = dispatcher.post('/rbac-api/v1/users', user_hash.to_json, {"Content-Type" => "application/json"})
+    raise(RuntimeError, response) unless response.code == '303'
+    puts get_users 
   end
 
   def remove_user
-    dispatcher.delete_local_user(dispatcher.get_user_id_by_login_name(user_name))
+    id = get_users.find { |u| u['login'] == user_name }['id']
+    response = dispatcher.delete("/rbac-api/v1/users/#{id}")
+    raise(RuntimeError, response) unless response.code == '204'
+    puts get_users
   end
 end
 
 def usage
-  puts "Usage: create_local_user <console-hostname.delivery.puppetlabs.net> <create|remove> [el-7-x86_64] [auser] [password]"
+  puts "Usage: create_local_user <console-hostname.delivery.puppetlabs.net> <create|remove> [auser] [password]"
   exit 1
 end
 
 console_hostname = ARGV[0]
 command    = ARGV[1]
-platform   = ARGV[2] || 'el-7-x86_64'
-user_name  = ARGV[3] || 'auser'
-password   = ARGV[4] || 'password'
-ssh_key    = ARGV[5]
-ssh_port   = ARGV[6] || 22
+user_name  = ARGV[2] || 'auser'
+password   = ARGV[3] || 'password'
 
 unless console_hostname
   usage
 end
 
-pe_user = PEUser.new(console_hostname, platform, user_name, password, ssh_key, ssh_port)
+pe_user = PEUser.new(console_hostname, user_name, password)
 
 case command
   when 'create' then pe_user.generate_user
