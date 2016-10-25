@@ -54,7 +54,12 @@ module ClassificationTool
   end
 
   def self.classifier_hostname
-    @classifier_hostname ||= `grep server /etc/puppetlabs/puppet/classifier.yaml | cut -d' ' -f2`.strip
+    if @classifier_hostname.nil?
+      first_server_line = `grep -m1 server /etc/puppetlabs/puppet/classifier.yaml`
+      match = first_server_line.match(/(?:- )?server: ([-\w.]+)$/)
+      @classifier_hostname = match[1]
+    end
+    @classifier_hostname
   end
 
   # URL of classifier as well as certificates and private key for auth
