@@ -20,9 +20,18 @@ provision() {
 
 install() {
   get_hostnames
-  ssh_on "$master" "/vagrant/do-install.sh $version master"
-  ssh_on "$db" "/vagrant/do-install.sh $version puppetdb"
-  ssh_on "$console" "/vagrant/do-install.sh $version console"
+  local t_year=${version%%.*}
+  local t_rest=${version#*.}
+  local t_minor=${t_rest%%.*}
+  if (( t_year < 2016 )) && (( t_minor < 2 )); then
+    ssh_on "$master" "/vagrant/do-install.sh $version master"
+    ssh_on "$db" "/vagrant/do-install.sh $version puppetdb"
+    ssh_on "$console" "/vagrant/do-install.sh $version console"
+  else
+    ssh_on "$master" "/vagrant/do-pem-install.sh -v $version -t $PLATFORM_STRING"
+    ssh_on "$db" "/vagrant/do-pem-install.sh -v $version -t $PLATFORM_STRING"
+    ssh_on "$console" "/vagrant/do-pem-install.sh -v $version -t $PLATFORM_STRING"
+  fi
 }
 
 secondrun() {
