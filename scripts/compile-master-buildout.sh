@@ -45,14 +45,14 @@ echo "* Installing $BUILD onto $mom"
 
 set +e
 ssh_on "$mom" "sudo /pe_builds/$BUILD/puppet-enterprise-installer -a /vagrant/answers/all-in-one.answers.txt 2>&1 | tee /vagrant/install.log"
-ssh_on "$cm" 'sudo /vagrant/frictionless.sh'
+ssh_on "$cm" "sudo /vagrant/frictionless.sh ${mom}"
 ssh_on "$cm" 'sudo /usr/local/bin/puppet agent -t'
 ssh_on "$mom" "sudo /usr/local/bin/puppet cert sign $cm"
 ./inject-classification-tool.sh "$mom"
 ssh_on "$mom" "sudo ${ruby_bin}/ruby /usr/local/bin/classification-tool.rb compile install $cm"
 ssh_on "$cm" "sudo /usr/local/bin/puppet agent -t"
 ssh_on "$mom" 'sudo /usr/local/bin/puppet agent -t' # to set whitelists
-ssh_on "$agent" "sudo /vagrant/frictionless.sh main:server=$cm"
+ssh_on "$agent" "sudo /vagrant/frictionless.sh ${mom} main:server=$cm"
 ssh_on "$agent" "sudo /usr/local/bin/puppet agent -t"
 ssh_on "$mom" "sudo /usr/local/bin/puppet cert sign $agent"
 ssh_on "$agent" "sudo /usr/local/bin/puppet agent -t"
