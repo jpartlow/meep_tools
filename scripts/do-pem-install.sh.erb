@@ -42,6 +42,20 @@ fi
 host=$(hostname -s)
 
 pushd "${build_dir?}"
+  # Add Frankenbuilder signing key if present
+  #
+  frankenbuilder_key=packages/GPG-KEY-frankenbuilder.pub
+  if [ -f "${frankenbuilder_key?}" ]; then
+    if [ -f /etc/redhat-release  ]; then
+      echo -e '      file:///opt/puppetlabs/server/data/packages/GPG-KEY-frankenbuilder' >> /etc/yum.repos.d/puppet_enterprise.repo
+      rpm --import "${frankenbuilder_key?}"
+    elif [ -f /etc/SuSE-release ]; then
+      rpm --import "${frankenbuilder_key?}"
+    else
+      # Ubuntu
+      apt-key add "${frankenbuilder_key?}"
+    fi
+  fi
   build=$(basename "${build_dir?}")
   [ "${IS_DEBUG}" = "true" ] && debug_flag='-D'
   time ./puppet-enterprise-installer -c "${conf_file}" "${debug_flag}" 2>&1 | tee "/vagrant/install-pem-${host}-${build?}.log"
