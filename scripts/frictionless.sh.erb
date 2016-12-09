@@ -1,3 +1,4 @@
-master=$1
+default_master=$(grep -Eo 'pe-[0-9]+-master.puppetdebug.vlan' /etc/hosts)
+master=${1:-$default_master}
 shift
 curl -k https://$master:8140/packages/current/install.bash | bash -s $@
