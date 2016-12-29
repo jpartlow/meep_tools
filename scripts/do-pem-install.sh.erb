@@ -1,3 +1,5 @@
+#! /bin/bash
+
 set -e
 #set -x
 
@@ -7,25 +9,10 @@ while getopts p:D name; do
         IS_DEBUG='true'
         ;;
     p)
-        path="${OPTARG?}"
+        build_dir="${OPTARG?}"
         ;;
   esac
 done
-
-if [ -z "${path}" ]; then
-  path=/puppetlabs/enterprise-dist/dists
-fi
-
-build_dir=($(find "${path?}" -type d -name 'puppet-enterprise*'))
-if [ -z "${build_dir[0]}" ]; then
-  ls -d "${path?}"
-  echo "** No installer directory found in ${path?}."
-  exit 1
-elif [[ ${#build_dir[@]} -gt 1 ]]; then
-  ls -d "${path?}"
-  echo "** Multiple installer directories in ${path?}.  You will need to specify one."
-  exit 1
-fi
 
 if [ -f /vagrant/hieradata/common.conf ]; then
   conf_file=/vagrant/hieradata/common.conf
@@ -56,7 +43,7 @@ pushd "${build_dir?}"
       apt-key add "${frankenbuilder_key?}"
     fi
   fi
-  build=$(basename "${build_dir?}")
+  build=$(cat "${build_dir?}/VERSION")
   [ "${IS_DEBUG}" = "true" ] && debug_flag='-D'
   time ./puppet-enterprise-installer -c "${conf_file}" "${debug_flag}" 2>&1 | tee "/vagrant/install-pem-${host}-${build?}.log"
   echo "** Installer exited with code: ${PIPESTATUS[0]}"
