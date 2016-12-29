@@ -63,12 +63,17 @@ rsync_on() {
     _host=${1?}
     _source=${2?}
     _target=${3}
+    _dryrun=${4}
+
+    if [ "${_dryrun}" == '-d' ]; then
+      dryrun='--dry-run'
+    fi
 
     if [[ "$_host" =~ .*\.puppetdebug\.vlan ]]; then
         _port=$(vagrant ssh-config ${_host%%.*} | grep Port | grep -oE '[0-9]+')
-        rsync --progress -rLptgoD -e "ssh -o StrictHostKeyChecking=false -p $_port" $_source root@localhost:${_target}
+        rsync --progress ${dryrun} -rLptgoD -e "ssh -o StrictHostKeyChecking=false -p $_port" $_source root@localhost:${_target}
     else
-        rsync --progress -rLptgOD $_source root@${_host}:${_target}
+        rsync --progress ${dryrun} -rLptgOD $_source root@${_host}:${_target}
     fi
 }
 
