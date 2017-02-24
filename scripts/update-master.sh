@@ -1,6 +1,6 @@
 #! /bin/bash
 set -e
-#set -x
+set -x
 
 master=$1
 SRC_DIR=/home/jpartlow/work/src/pl/pe-modules
@@ -15,7 +15,7 @@ shift
 
 . ./common.sh
 
-ensure_rsync $PLATFORM $master
+#ensure_rsync $PLATFORM $master
 
 ssh_on $master 'echo done'
 
@@ -45,5 +45,7 @@ for module in "$@"; do
     else
         echo "install $module in basemodulepath"
         ssh_on $master "/opt/puppetlabs/bin/puppet module install --force /root/$package_name --modulepath /opt/puppetlabs/puppet/modules"
+        echo "install $module in enterprise modulepath"
+        ssh_on $master "[ -d /opt/puppetlabs/server/data/enterprise/modules ] && /opt/puppetlabs/bin/puppet module install --force /root/$package_name --modulepath /opt/puppetlabs/server/data/enterprise/modules"
     fi 
 done
