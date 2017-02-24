@@ -28,9 +28,11 @@ install() {
     ssh_on "$db" "/vagrant/do-install.sh $version puppetdb"
     ssh_on "$console" "/vagrant/do-install.sh $version console"
   else
-    ssh_on "$master" "/vagrant/do-pem-install.sh -v $version -t $PLATFORM_STRING"
-    ssh_on "$db" "/vagrant/do-pem-install.sh -v $version -t $PLATFORM_STRING"
-    ssh_on "$console" "/vagrant/do-pem-install.sh -v $version -t $PLATFORM_STRING"
+    local t_build=$(find -L pe_builds -type d -name "puppet-enterprise-${version?}*-${PLATFORM_STRING?}*" -printf "%f\n" | sort | tail -n1)
+    local t_build_dir="/pe_builds/${t_build?}"
+    ssh_on "$master" "/vagrant/do-pem-install.sh -p ${t_build_dir?}"
+    ssh_on "$db" "/vagrant/do-pem-install.sh -p ${t_build_dir?}"
+    ssh_on "$console" "/vagrant/do-pem-install.sh -p ${t_build_dir?}"
   fi
 }
 
@@ -49,7 +51,7 @@ agent() {
 }
 
 classifier() {
-  inject-classification-tool.sh "${master}"
+  ./inject-classification-tool.sh "${master}"
 }
 
 snapshot() {
