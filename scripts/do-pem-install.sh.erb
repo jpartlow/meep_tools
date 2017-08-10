@@ -21,9 +21,9 @@ else
 fi
 
 build=$(cat "${build_dir?}/VERSION")
-local t_year=${build%%.*}
-local t_rest=${build#*.}
-local t_minor=${t_rest%%.*}
+t_year=${build%%.*}
+t_rest=${build#*.}
+t_minor=${t_rest%%.*}
 
 if [ -f /vagrant/hieradata/common.yaml ]; then
   if [ "${t_year}" -ge 2017 ] && [ "$t_minor" -ge 2 ]; then
