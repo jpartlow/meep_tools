@@ -14,8 +14,8 @@ while getopts p:D name; do
   esac
 done
 
-if [ -f /vagrant/hieradata/common.conf ]; then
-  conf_file=/vagrant/hieradata/common.conf
+if [ -f /vagrant/hieradata/pe.conf ]; then
+  conf_file=/vagrant/hieradata/pe.conf
 else
   conf_file=conf.d/common.conf
 fi
