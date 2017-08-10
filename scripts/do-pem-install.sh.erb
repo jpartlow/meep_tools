@@ -20,8 +20,19 @@ else
   conf_file=conf.d/common.conf
 fi
 
+build=$(cat "${build_dir?}/VERSION")
+local t_year=${build%%.*}
+local t_rest=${build#*.}
+local t_minor=${t_rest%%.*}
+
 if [ -f /vagrant/hieradata/common.yaml ]; then
-  production_hieradata=/etc/puppetlabs/code/environments/production/hieradata
+  if [ "${t_year}" -ge 2017 ] && [ "$t_minor" -ge 2 ]; then
+    # hiera 5
+    production_hieradata=/etc/puppetlabs/code/environments/production/data
+  else
+    production_hieradata=/etc/puppetlabs/code/environments/production/hieradata
+  fi
+
   mkdir -p $production_hieradata
   cp /vagrant/hieradata/common.yaml $production_hieradata
 fi
@@ -43,7 +54,6 @@ pushd "${build_dir?}"
       apt-key add "${frankenbuilder_key?}"
     fi
   fi
-  build=$(cat "${build_dir?}/VERSION")
   [ "${IS_DEBUG}" = "true" ] && debug_flag='-D'
   time ./puppet-enterprise-installer -c "${conf_file}" "${debug_flag}" 2>&1 | tee "/vagrant/install-pem-${host}-${build?}.log"
   echo "** Installer exited with code: ${PIPESTATUS[0]}"
