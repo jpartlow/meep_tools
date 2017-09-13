@@ -26,15 +26,21 @@ t_rest=${build#*.}
 t_minor=${t_rest%%.*}
 
 if [ -f /vagrant/hieradata/common.yaml ]; then
-  if [ "${t_year}" -ge 2017 ] && [ "$t_minor" -ge 2 ]; then
+  if [ "${t_year}" -ge 2017 ] && [ "$t_minor" -ge 3 ]; then
+    # do nothing, because we have pe.conf referenced in module data and don't need
+    # to push configuration to the environment hiera level
+    echo 'skip hieradata'
+  elif [ "${t_year}" -ge 2017 ] && [ "$t_minor" -ge 2 ]; then
     # hiera 5
     production_hieradata=/etc/puppetlabs/code/environments/production/data
   else
     production_hieradata=/etc/puppetlabs/code/environments/production/hieradata
   fi
 
-  mkdir -p $production_hieradata
-  cp /vagrant/hieradata/common.yaml $production_hieradata
+  if [ -n "${production_hieradata}" ]; then
+    mkdir -p $production_hieradata
+    cp /vagrant/hieradata/common.yaml $production_hieradata
+  fi
 fi
 
 host=$(hostname -s)
