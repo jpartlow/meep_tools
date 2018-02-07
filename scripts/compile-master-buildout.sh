@@ -80,6 +80,11 @@ else
     path_to_build="/pe_builds/$BUILD"
 fi
 
+if [ ! -f 'hieradata/pe.conf' ]; then
+  echo "No pe.conf under hieradata; can't install with MEEP..."
+  exit 1
+fi
+
 ssh_on "$mom" "sudo /vagrant/do-pem-install.sh -p ${path_to_build?}"
 ./inject-classification-tool.sh "$mom"
 install_agent "$cm" "$mom"
