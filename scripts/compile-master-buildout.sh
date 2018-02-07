@@ -53,6 +53,7 @@ if [ "$found_mom" != '0' -o "$found_cm" != '0' -o "$found_agent" != '0' ]; then
     echo "Will do a monolithic install on the master node"
     echo "** This script currently only works in my local vms!"
     echo "** Would make more sense to run this with Beaker..."
+    exit 1
 fi
 
 if [ -z "$BUILD" ] && [ -z "$path" ]; then
