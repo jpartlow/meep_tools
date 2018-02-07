@@ -2,8 +2,8 @@
 #set -x
 
 file=${1}
-current=${2:-glisan}
-older=${3:-flanders}
+older=${2:-hoyt}
+current=${3:-irving}
 
 if [ -z "$file" ]; then
   echo "Usage: compare-conflicts.sh file [current_version] [older_version]"
