@@ -20,7 +20,12 @@ esac
 PLATFORM_VERSION=${PLATFORM_VERSION:-${defaults[1]}}
 ARCH=${ARCH:-$default_arch}
 PLATFORM_STRING="${PLATFORM?}-${PLATFORM_VERSION?}-${ARCH?}"
-BUILD=$(find -L pe_builds -type d -name "puppet-enterprise-${FULL_VER?}-*-${PLATFORM_STRING?}*" -printf "%f\n" | sort | tail -n1)
+# find release version
+BUILD=$(find -L pe_builds -type d -name "puppet-enterprise-${FULL_VER?}-${PLATFORM_STRING?}*" -printf "%f\n" | sort | tail -n1)
+# or dev version
+if [ -z "$BUILD" ]; then
+  BUILD=$(find -L pe_builds -type d -name "puppet-enterprise-${FULL_VER?}-*-${PLATFORM_STRING?}*" -printf "%f\n" | sort | tail -n1)
+fi
 echo "VER: $VER"
 echo "FULL_VER: $FULL_VER"
 echo "PLATFORM_STRING: $PLATFORM_STRING"
