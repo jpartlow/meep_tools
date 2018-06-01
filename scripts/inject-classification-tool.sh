@@ -12,7 +12,9 @@ while getopts s name; do
   shift
 done
 
-. ./common.sh
+readonly SCRIPT_DIR="$(dirname "${0}")/../scripts"
+
+. "$SCRIPT_DIR/common.sh"
 
 target=${1}
 tool=${2:-all}
@@ -25,8 +27,8 @@ if [ -z "${target}" ]; then
     exit 1
 fi
 
-if [ "$INSTALL_RSYNC" = "true" ]; then
-  ensure_rsync $PLATFORM $target
+if [ "$INSTALL_RSYNC" = "true" ] && [ -n "$PLATFORM" ]; then
+  ensure_rsync "$PLATFORM" "$target"
 fi
 
 echo "VER: ${VER}"
@@ -37,9 +39,9 @@ else
 fi
 
 if [ "$tool" = "all" -o "$tool" = "classification" ]; then
-  ssh_on $target "${ruby_bin?}/gem install puppetclassify"
-  rsync_on $target ./classification-tool.rb /usr/local/bin
+  ssh_on "$target" "${ruby_bin?}/gem install puppetclassify"
+  rsync_on "$target" "${SCRIPT_DIR}/classification-tool.rb" /usr/local/bin
 fi
 if [ "$tool" = "all" -o "$tool" = "rbac" ]; then
-  rsync_on $target /s/scripts/create_local_user.rb /usr/local/bin
+  rsync_on "$target" "${SCRIPT_DIR}/create_local_user.rb" /usr/local/bin
 fi
