@@ -50,11 +50,9 @@ ensure_rsync() {
     esac
 }
 
-ssh_on() {
-    _host=${1?}
-    _command=${2?}
-
-    echo "--> ($_host)# $_command"
+_ssh_on() {
+    local _host=${1?}
+    local _command=${2?}
 
     if [[ "$_host" =~ .*\.puppetdebug\.vlan ]]; then
         _hostname=${_host%%.*}
@@ -64,6 +62,26 @@ ssh_on() {
         # accept master's host key since it's just a qa vm
         ssh -o StrictHostKeyChecking=no "root@${_host}" "$_command"
     fi
+}
+
+ssh_on() {
+    local _host=${1?}
+    local _command=${2?}
+
+    echo "--> ($_host)# $_command"
+    _ssh_on "$_host" "$_command"
+}
+
+ssh_get() {
+    local _host=${1?}
+    local _command=${2?}
+    local _variable=${3?}
+
+    echo "--> ($_host)# $_command"
+    local value
+    value=$(_ssh_on "$_host" "$_command")
+    # An ugly and unsafe workaround for getting return values in BASH
+    eval "${_variable}=${value}"
 }
 
 rsync_on() {
@@ -80,7 +98,7 @@ rsync_on() {
         _port=$(vagrant ssh-config "${_host%%.*}" | grep Port | grep -oE '[0-9]+')
         rsync --progress "${dryrun}" -rLptgoD -e "ssh -o StrictHostKeyChecking=false -p $_port" "$_source" "root@localhost:${_target}"
     else
-        rsync --progress "${dryrun}" -rLptgOD "$_source" "root@${_host}:${_target}"
+        rsync --progress ${dryrun} -rLptgOD "$_source" "root@${_host}:${_target}"
     fi
 }
 

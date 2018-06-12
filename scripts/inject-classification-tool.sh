@@ -27,7 +27,10 @@ if [ -z "${target}" ]; then
     exit 1
 fi
 
-if [ "$INSTALL_RSYNC" = "true" ] && [ -n "$PLATFORM" ]; then
+if [ "$INSTALL_RSYNC" = "true" ]; then
+  if [ -z "$PLATFORM" ]; then
+    ssh_get "$target" "facter -p platform_tag" "PLATFORM"
+  fi
   ensure_rsync "$PLATFORM" "$target"
 fi
 
