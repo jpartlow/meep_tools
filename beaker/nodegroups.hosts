@@ -1,0 +1,90 @@
+default_platform: &default_platform el-7-x86_64
+default_image: &default_image centos_7_x86_64
+default_user: &default_user centos
+
+HOSTS:
+  primary.nodegroups.net:
+    roles:
+      - master
+      - database
+      - dashboard
+      - agent
+    platform: *default_platform
+    hypervisor: openstack
+    image: *default_image
+    user: *default_user
+    flavor: g1.large # 4GB 4VCPU 32GB
+  compile1.nodegroups.net:
+    roles:
+      - compile_master
+      - agent
+      - frictionless
+    platform: *default_platform
+    hypervisor: openstack
+    image: *default_image
+    user: *default_user
+    flavor: g1.medium # 2GB 2VCPU 16GB
+  compile2.nodegroups.net:
+    roles:
+      - compile_master
+      - agent
+      - frictionless
+    platform: *default_platform
+    hypervisor: openstack
+    image: *default_image
+    user: *default_user
+    flavor: g1.medium # 2GB 2VCPU 16GB
+  lb.nodegroups.net:
+    roles:
+      - loadbalancer
+      - agent
+      - frictionless
+    platform: *default_platform
+    hypervisor: openstack
+    image: *default_image
+    user: *default_user
+    flavor: g1.small # 1GB 1VCPU 8GB
+  agent1.pdx.nodegroups.net:
+    roles:
+      - agent
+      - frictionless
+    platform: *default_platform
+    hypervisor: openstack
+    image: *default_image
+    user: *default_user
+    flavor: g1.small
+  agent2.bfs.nodegroups.net:
+    roles:
+      - agent
+      - frictionless
+    platform: *default_platform
+    hypervisor: openstack
+    image: *default_image
+    user: *default_user
+    flavor: g1.small
+
+CONFIG:
+  answers:
+    console_admin_password: puppetlabs
+  pe_dir: http://enterprise.delivery.puppetlabs.net/2017.3/ci-ready/
+  pe_ver:
+#  project: scale-testing
+  # The following assumes you have also sourced your openrc setup script
+  openstack_auth_url: https://slice-pdx1-prod.ops.puppetlabs.net:5000/v2.0/tokens
+  openstack_network : network0
+  openstack_keyname : slice-jpartlow
+  openstack_tenant  : joshua.partlow
+  security_group: ['sg0']
+  floating_ip_pool: ext-net-pdx1-opdx1
+  ssh:
+    keys:
+      - ~/.ssh/slice-jpartlow.pem
+
+#  scale:
+#    num_nonroot_users: 1
+#    facts_per_agent: 300
+#    percent_facts_to_change: 0
+#    module_roles: 150
+#    static_files: 500
+#    dynamic_files: 0
+#    environments: 100

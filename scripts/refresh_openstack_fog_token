@@ -1,0 +1,74 @@
+#! /usr/bin/env ruby
+
+# Ensures that a current openstack token is present in ~/.fog so that I don't
+# have to retype my password every time.
+
+require 'fog/openstack'
+require 'io/console'
+
+def get_compute_handle(connection_params = {})
+  Fog::Compute::OpenStack.new(connection_params)
+end
+
+def get_password
+  password = ENV['OS_PASSWORD']
+  if password.nil?
+    puts "Please enter LDAP credentials to authenticate to openstack: "
+    password = STDIN.noecho(&:gets).chomp
+  end
+  return password
+end
+
+# ew
+def lookup_expiration
+  begin
+    response = Fog::OpenStack.token_cache.first.last.first
+    body = Fog::JSON.decode(response.body)
+    Time.parse(body['token']['expires_at']).localtime
+  rescue RuntimeError
+    "Failed to lookup the token's expires_at value"
+  end
+end
+
+def cache_token(token)
+  fog_file = "#{ENV['HOME']}/.fog"
+  yaml = File.read(fog_file)
+  fog = YAML.load(yaml)
+  if fog[:default][:openstack_auth_token] != token
+    puts "Cacheing token in #{fog_file}."
+    expires = lookup_expiration
+    puts "This token should be good until #{expires}"
+    fog[:default][:openstack_auth_token] = token
+    File.write(fog_file, YAML.dump(fog))
+  end
+end
+
+# Assumes that ~/.fog has these openstack parameters:
+#
+#   :default:
+#     :openstack_auth_token: 'something'
+#     # Note that the cache_ttl has no effect on how long the token is cached by
+#     # openstack. It just affects whether the fog-openstack gem caches the token
+#     # info so that we can find it to push back into ~/.fog ...
+#     :openstack_cache_ttl: 86400
+#     :openstack_auth_url: 'https://slice-pdx1-prod.ops.puppetlabs.net:5000/v3/auth/tokens'
+#     :openstack_username: "joshua.partlow"
+#     :openstack_project_name: "joshua.partlow"
+#     :openstack_domain_id: "default"
+#
+def validate_or_cache_token
+  compute = nil
+  begin
+    compute = get_compute_handle
+  rescue Excon::Error::BadRequest, Excon::Error::NotFound
+    puts "The openstack_auth_token is missing or has expired."
+    compute = get_compute_handle({
+      :openstack_auth_token => nil,
+      :openstack_api_key => get_password,
+    })
+  end
+
+  cache_token(compute.auth_token)
+end
+
+validate_or_cache_token
