@@ -29,7 +29,7 @@ fi
 
 if [ "$INSTALL_RSYNC" = "true" ]; then
   if [ -z "$PLATFORM" ]; then
-    ssh_get "$target" "facter -p platform_tag" "PLATFORM"
+    ssh_get "$target" "puppet facts | grep platform_tag | grep -oE '[a-z0-9_]+-[a-z0-9_]+-[a-z0-9_]'" "PLATFORM"
   fi
   ensure_rsync "$PLATFORM" "$target"
 fi
