@@ -4,3 +4,4 @@ pe3*/
 product-vagrant-boxes/
 windows/
 vagrant-windows-puppet
+Gemfile.lock
