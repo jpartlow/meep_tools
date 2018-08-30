@@ -9,9 +9,8 @@ if [ -z "$pooler_host" ]; then
   exit 1
 fi
 
-# Hard coded for present, and currently just using the slice ip...
-slice_ip=10.32.163.108
-#platform9_ip=10.234.0.206
+# Hard coded for present, and currently just using the platform9 workstation ip...
+platform9_ip=10.234.0.206
 
 . /home/jpartlow/work/src/integration-tools/scripts/common.sh
 
@@ -21,4 +20,4 @@ echo "\"/home/jpartlow/work/src\" ${pooler_ip:?}(ro,no_subtree_check,all_squash,
 sudo exportfs -a
 
 ssh_on "${pooler_host:?}" "mkdir /jpartlow-src"
-ssh_on "${pooler_host:?}" "mount ${slice_ip:?}:/home/jpartlow/work/src /jpartlow-src"
+ssh_on "${pooler_host:?}" "mount ${platform9_ip:?}:/home/jpartlow/work/src /jpartlow-src"
