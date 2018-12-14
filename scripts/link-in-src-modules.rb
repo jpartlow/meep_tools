@@ -2,8 +2,8 @@
 require 'pp'
 require 'open3'
 
-puppet_modules_path     = "/opt/puppetlabs/puppet/modules"
-enterprise_modules_path = "/opt/puppetlabs/server/data/environments/enterprise/modules"
+PUPPET_MODULES_PATH     = "/opt/puppetlabs/puppet/modules"
+ENTERPRISE_MODULES_PATH = "/opt/puppetlabs/server/data/environments/enterprise/modules"
 
 flags   = []
 modules = []
@@ -20,8 +20,8 @@ def usage(error)
   puts "link-in-src-modules.rb [options] [modules]"
   puts
   puts " options:"
-  puts "   -p : link modules into #{puppet_modules_path}"
-  puts "   -e : link modules into #{enterprise_modules_path}"
+  puts "   -p : link modules into #{PUPPET_MODULES_PATH}"
+  puts "   -e : link modules into #{ENTERPRISE_MODULES_PATH}"
   puts "   -a : link into both"
   puts
   puts " modules:"
@@ -80,12 +80,12 @@ end
 
 if puppet_modules
   found_modules.each do |m|
-    link_module(m, puppet_modules_path, 'base')
+    link_module(m, PUPPET_MODULES_PATH, 'base')
   end
 end
 
 if enterprise_modules
   found_modules.each do |m|
-    link_module(m, enterprise_modules_path, 'enterprise')
+    link_module(m, ENTERPRISE_MODULES_PATH, 'enterprise')
   end
 end
