@@ -64,16 +64,7 @@ pushd "${pe_package_dir}"
   createrepo --update .
 popd
 
+grep -E '^[^#]*postgres_version_override' "${pe_dir}/conf.d/custom-pe.conf" || exit 2
+
 # retry pe installation
-pushd "${pe_dir}"
-  # clear up existing installation
-  ./puppet-enterprise-uninstaller -y -p -d
-  # prep install to get puppet-agent and pe-modules back into place
-  ./puppet-enterprise-installer -p -c conf.d/custom-pe.conf
-  # link in src overrides for the module code I'm testing
-  /jpartlow-src/integration-tools/scripts/link-in-src-modules.rb -a puppet_enterprise
-  # run the actual installation (this assumes that conf.d/custom-pe.conf has whatever parameters
-  # we need to test already.
-  grep -E '^[^#]*postgres_version_override' conf.d/custom-pe.conf || exit 2
-  ./puppet-enterprise-installer -c conf.d/custom-pe.conf
-popd
+/jpartlow-src/integration-tools/scripts/rerun-pe-install-with-module-links.sh -d "${pe_dir}" -m puppet_enterprise
