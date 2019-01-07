@@ -14,7 +14,7 @@ workstation_ip=10.234.2.148
 
 . /home/jpartlow/work/src/integration-tools/scripts/common.sh
 
-ssh_get "${pooler_host:?}" "facter networking.ip" "pooler_ip"
+ssh_get "${pooler_host:?}" "/opt/puppetlabs/bin/facter networking.ip" "pooler_ip"
 
 echo "\"/home/jpartlow/work/src\" ${pooler_ip:?}(ro,no_subtree_check,all_squash,anonuid=1000,anongid=1000,fsid=3725123654) # $(date)" >> /etc/exports
 sudo exportfs -a
