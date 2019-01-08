@@ -29,6 +29,15 @@ if [ -z "${pe_dir}" ] || [ -z "${pe_modules}" ]; then
 fi
 
 pushd "${pe_dir}"
+  # unlink modules (particularly a problem on ubuntu)
+  for m in $pe_modules; do
+    if [ -s "/opt/puppetlabs/puppet/modules/${m}" ]; then
+      rm "/opt/puppetlabs/puppet/modules/${m}"
+    fi
+    if [ -s "/opt/puppetlabs/server/data/environments/enterprise/modules/${m}" ]; then
+      rm "/opt/puppetlabs/server/data/environments/enterprise/modules/${m}"
+    fi
+  done
   # clear up existing installation
   ./puppet-enterprise-uninstaller -y -p -d
   # prep install to get puppet-agent and pe-modules back into place
