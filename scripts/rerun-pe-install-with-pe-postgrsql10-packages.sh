@@ -54,12 +54,24 @@ case "$os" in
     for package in ${pe_package_dir}/pe-postgresql10*; do
       echo "$package"
 
+      if [ "$os_ver" == "6" ]; then
+        keyid=''
+        cat > /root/.rpmmacros <<EOF
+%_signature gpg
+%_gpg_path /root/.gnupg
+%_gpg_name Frankenbuilder Signing Key <team-organizational-scale@puppet.com>
+%_gpgbin /usr/bin/gpg
+EOF
+      else
+        keyid="--key-id frankenbuilder"
+      fi
+
       # use expect to get the empty passphrase to gpg beneath rpmsign
       # (the need for this is beyond stupid)
       cat > /tmp/rpmsign.expect <<EOF
   set timeout -1
 
-  spawn rpmsign --key-id frankenbuilder --addsign $package
+  spawn rpmsign ${keyid} --addsign $package
 
   expect "Enter pass phrase: "
 
