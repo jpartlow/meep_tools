@@ -1,16 +1,26 @@
 #! /bin/bash
 
-# When executed on a centos-7 vm, assuming scripts/nfs-mount.sh has been used
-# to set up nfs mount to my src dir, and a 2019.1 PE tarball has been extracted
-# in /root, this script automates copying in newly built pe-postgresql10* rpm
-# packages into the PE tarball, signing them with the frankenbuild gpg key and
-# updating the repository so that they can be installed.
+# When executed on a master platform vm, assuming scripts/nfs-mount.sh has been
+# used to set up nfs mount to my src dir, and a 2019.1 PE tarball has been
+# extracted in /root, this script automates copying in newly built
+# pe-postgresql<ver>* packages into the PE tarball, signing them or the repodata
+# (depends on platform) with the frankenbuild gpg key and updating the
+# repository so that they can be installed.
 #
 # It completely uninstalls PE, then preps an install and links in my current
 # puppetlabs-puppet_enterprise module from source before installing completely.
 
-set -x
+#set -x
 set -e
+
+postgres_package_version=$1
+
+if [ -z "${postgres_package_version}" ]; then
+  echo "Usage: re-run-pe-install-wtih-pe-postgresql-packages.sh <postgres_version>"
+  echo "  where <postgres_version> should be the major version without punctuation"
+  echo "  (so 96 (9.6), 10 or 11...)"
+  exit 1
+fi
 
 platform=$(/opt/puppetlabs/bin/puppet facts | grep platform_tag | grep -oE '[a-z0-9_]+-[a-z0-9_.]+-[a-z0-9_]+')
 os=${platform%%-*}
@@ -44,31 +54,33 @@ case "$os" in
 
     yum install -y tree vim rpm-sign createrepo expect
 
-    # cp my dev postgres10 packages into the pe tarball
+    # cp my dev postgres packages into the pe tarball
     cp /jpartlow-src/puppet-enterprise-vanagon/output/"$os"/"$os_ver"/products/x86_64/*.rpm "${pe_package_dir}"
 
     # ensure pub key is imported into rpm
     rpm --import gpg/GPG-KEY-frankenbuilder.pub
 
-    # sign packages
-    for package in ${pe_package_dir}/pe-postgresql10*; do
-      echo "$package"
+    # sign packages (sign any built versioned packages, since we might want to
+    # install side by side)
+    for package in ${pe_package_dir}/pe-postgresql{96,10,11}*; do
+      if [ -f "$package" ]; then
+        echo "$package"
 
-      if [ "$os_ver" == "6" ]; then
-        keyid=''
-        cat > /root/.rpmmacros <<EOF
+        if [ "$os_ver" == "6" ]; then
+          keyid=''
+          cat > /root/.rpmmacros <<EOF
 %_signature gpg
 %_gpg_path /root/.gnupg
 %_gpg_name Frankenbuilder Signing Key <team-organizational-scale@puppet.com>
 %_gpgbin /usr/bin/gpg
 EOF
-      else
-        keyid="--key-id frankenbuilder"
-      fi
+        else
+          keyid="--key-id frankenbuilder"
+        fi
 
-      # use expect to get the empty passphrase to gpg beneath rpmsign
-      # (the need for this is beyond stupid)
-      cat > /tmp/rpmsign.expect <<EOF
+        # use expect to get the empty passphrase to gpg beneath rpmsign
+        # (the need for this is beyond stupid)
+        cat > /tmp/rpmsign.expect <<EOF
   set timeout -1
 
   spawn rpmsign ${keyid} --addsign $package
@@ -82,8 +94,9 @@ EOF
   expect eof
 EOF
 
-      expect -d /tmp/rpmsign.expect
-      rpm -K "$package" | grep pgp || exit 3
+        expect -d /tmp/rpmsign.expect
+        rpm -K "$package" | grep pgp || exit 3
+      fi
     done
 
     # rebuild repo
@@ -94,7 +107,7 @@ EOF
   sles)
     zypper install -y tree vim createrepo
 
-    # cp my dev postgres10 packages into the pe tarball
+    # cp my dev postgres packages into the pe tarball
     cp /jpartlow-src/puppet-enterprise-vanagon/output/"$os"/"$os_ver"/products/x86_64/*.rpm "${pe_package_dir}"
 
     # ensure pub key is imported into rpm
@@ -168,7 +181,11 @@ SHA256:
     ;;
 esac
 
-grep -E '^[^#]*postgres_version_override' "${pe_dir}/conf.d/custom-pe.conf" || exit 3
+if grep -E '^[^#]*postgres_version_override' "${pe_dir}/conf.d/custom-pe.conf"; then
+  sed -e "/postgres_version_override/ s/\"[0-9]\+\"/\"${postgres_package_version}\"/" -i "${pe_dir}/conf.d/custom-pe.conf"
+else
+  sed -e "/\"console_admin_password\"/ a \"puppet_enterprise::postgres_version_override\": \"${postgres_package_version}\"" -i "${pe_dir}/conf.d/custom-pe.conf"
+fi
 
 # retry pe installation
 /jpartlow-src/integration-tools/scripts/rerun-pe-install-with-module-links.sh -d "${pe_dir}" -m puppet_enterprise,pe_postgresql
