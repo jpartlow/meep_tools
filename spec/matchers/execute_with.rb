@@ -6,9 +6,9 @@ RSpec::Matchers.define(:execute) do
 
     allow(RunShellExecutable).to receive(:executor).and_return(TestExecutor.new)
 
-    if klass_or_instance.kind_of?(RunShell)
+    if klass_or_instance.kind_of?(Thor)
       @runner = klass_or_instance
-      @runner.io = @stdout_tmp
+      @runner.class.io = @stdout_tmp
     else
       begin
         @runner = klass_or_instance.invoke(@args.split, @stdout_tmp)

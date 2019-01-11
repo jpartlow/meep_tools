@@ -3,6 +3,7 @@ require 'pp'
 require 'pry-byebug'
 
 $LOAD_PATH << File.expand_path(File.join(File.dirname(__FILE__),'..','lib'))
+$LOAD_PATH << File.expand_path(File.join(File.dirname(__FILE__),'..','scripts'))
 
 module SpecHelpers
   def fixtures_path

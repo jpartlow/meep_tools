@@ -13,12 +13,14 @@
 #set -x
 set -e
 
-postgres_package_version=$1
+postgres_major_version=$1
 
-if [ -z "${postgres_package_version}" ]; then
+if [ "${postgres_major_version}" != "9.6" ] &&
+   [ "${postgres_major_version}" != "10" ] &&
+   [ "${postgres_major_version}" != "11" ]; then
   echo "Usage: re-run-pe-install-wtih-pe-postgresql-packages.sh <postgres_version>"
   echo "  where <postgres_version> should be the major version without punctuation"
-  echo "  (so 96 (9.6), 10 or 11...)"
+  echo "  (so 9.6, 10 or 11...)"
   exit 1
 fi
 
@@ -182,9 +184,9 @@ SHA256:
 esac
 
 if grep -E '^[^#]*postgres_version_override' "${pe_dir}/conf.d/custom-pe.conf"; then
-  sed -e "/postgres_version_override/ s/\"[0-9]\+\"/\"${postgres_package_version}\"/" -i "${pe_dir}/conf.d/custom-pe.conf"
+  sed -e "/postgres_version_override/ s/\"[0-9]\+\"/\"${postgres_major_version}\"/" -i "${pe_dir}/conf.d/custom-pe.conf"
 else
-  sed -e "/\"console_admin_password\"/ a \"puppet_enterprise::postgres_version_override\": \"${postgres_package_version}\"" -i "${pe_dir}/conf.d/custom-pe.conf"
+  sed -e "/\"console_admin_password\"/ a \"puppet_enterprise::postgres_version_override\": \"${postgres_major_version}\"" -i "${pe_dir}/conf.d/custom-pe.conf"
 fi
 
 # retry pe installation
