@@ -1,0 +1,14 @@
+{
+  "description": "Download and unpack the correct pe tarball for the platform",
+  "input_method": "environment",
+  "parameters": {
+    "platform_tag": {
+      "description": "The master platform os-ver-arch tag we will install on. Needed to construct the tarball url",
+      "type": "String"
+    },
+    "version": {
+      "description": "The version of pe. Needed to construct the tarball url",
+      "type": "String"
+    }
+  }
+}
