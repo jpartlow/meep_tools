@@ -1,0 +1,18 @@
+{
+  "description": "Mount a directory from an nfs server.",
+  "input_method": "environment",
+  "parameters": {
+    "source_ip": {
+      "description": "The ip address providing the nfs directory.",
+      "type": "String"
+    },
+    "source_dir": {
+      "description": "The directory on the source host to mount.",
+      "type": "String"
+    },
+    "local_mount_dir": {
+      "description": "The local directory to mount at.",
+      "type": "String"
+    }
+  }
+}

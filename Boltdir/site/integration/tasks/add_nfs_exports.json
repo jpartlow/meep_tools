@@ -1,0 +1,14 @@
+{
+  "description": "Allow an nfs mount of the given source_dir from the given target_ip.",
+  "input_method": "environment",
+  "parameters": {
+    "source_dir": {
+      "description": "The directory we are allowing NFS to mount.",
+      "type": "String"
+    },
+    "target_ip": {
+      "description": "The ip address of the target node that should be allowed to mount the source_dir.",
+      "type": "String"
+    }
+  }
+}
