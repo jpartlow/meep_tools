@@ -5,3 +5,4 @@ product-vagrant-boxes/
 windows/
 vagrant-windows-puppet
 Gemfile.lock
+Boltdir/inventory.yaml
