@@ -78,8 +78,8 @@ module RunShellExecutable
   end
 
   class Executor
-    def exec(command)
-      Open3.capture2e(command)
+    def exec(command, options = {})
+      Open3.capture2e(command, options)
     end
   end
 
@@ -91,7 +91,8 @@ module RunShellExecutable
     capture = options[:capture]
     test = options[:test]
 
-    stdout_and_err, status = RunShellExecutable.executor.exec(command)
+    process_options = options.slice(:chdir)
+    stdout_and_err, status = RunShellExecutable.executor.exec(command, process_options)
 
     failed = !status.success?
     out(cyan(command)) if debugging? || !muzzled?
