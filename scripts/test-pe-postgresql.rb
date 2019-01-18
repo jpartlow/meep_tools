@@ -21,9 +21,9 @@ class TestPostgresql < Thor
 
   # Valid package patterns to build (need to be expanded with version)
   PACKAGES = [
-    "postgresql%s",
-    "postgresql%s-server",
-    "postgresql%s-contrib",
+    "pe-postgresql%s",
+    "pe-postgresql%s-server",
+    "pe-postgresql%s-contrib",
   ].freeze
 
   # Valid pe-postgresql package versions
@@ -105,10 +105,22 @@ class TestPostgresql < Thor
   method_option :packages, :type => :array, :enum => PACKAGES, :default => PACKAGES
   method_option :version, :type => :string, :enum => VERSIONS, :required => true
   def build
-    action('Build pe-postgresql packages for a set of platforms') do
+    action('Build pe-postgresql packages for a set of platforms (in parallel)') do
       package_names = options[:packages].map { |p| p % options[:version] }
-      options[:platforms].product(package_names).each do |i|
-#        Thread.new 
+      threads = options[:platforms].product(package_names).map do |i|
+        platform, package = i
+        Thread.new do
+          Thread.current[:platform] = platform
+          Thread.current[:package] = package
+          Thread.current[:level] = Thread.main[:level] || 0
+          action("Starting: Build #{package} for #{platform}...") do
+            run("bundle exec build #{package} #{platform}", :chdir => '/s/puppet-enterprise-vanagon')
+          end
+        end
+      end
+      threads.each do |t|
+        t.join
+        out("Finished: Build #{t[:package]} for #{t[:platform]}")
       end
     end
   end

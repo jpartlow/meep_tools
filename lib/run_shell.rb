@@ -22,11 +22,11 @@ module RunShellExecutable
   end
 
   def level
-    @level ||= 0
+    Thread.current[:level] ||= 0
   end
 
   def level=(value)
-    @level = value
+    Thread.current[:level] = value
   end
 
   def colorize(color_code, string)
