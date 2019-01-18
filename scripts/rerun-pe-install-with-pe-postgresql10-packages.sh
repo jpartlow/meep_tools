@@ -183,11 +183,11 @@ SHA256:
     ;;
 esac
 
-if grep -E '^[^#]*postgres_version_override' "${pe_dir}/conf.d/custom-pe.conf"; then
-  sed -e "/postgres_version_override/ s/\"[0-9]\+\"/\"${postgres_major_version}\"/" -i "${pe_dir}/conf.d/custom-pe.conf"
+if grep -E '^[^#]*postgres_version_override' "/root/pe.conf"; then
+  sed -e "/postgres_version_override/ s/\"[0-9]\+\"/\"${postgres_major_version}\"/" -i "/root/pe.conf"
 else
-  sed -e "/\"console_admin_password\"/ a \"puppet_enterprise::postgres_version_override\": \"${postgres_major_version}\"" -i "${pe_dir}/conf.d/custom-pe.conf"
+  sed -e "/puppet_master_host/ a \"puppet_enterprise::postgres_version_override\": \"${postgres_major_version}\"" -i "/root/pe.conf"
 fi
 
 # retry pe installation
-/jpartlow-src/integration-tools/scripts/rerun-pe-install-with-module-links.sh -d "${pe_dir}" -m puppet_enterprise,pe_postgresql
+/jpartlow-src/integration-tools/scripts/rerun-pe-install-with-module-links.sh -d "${pe_dir}" -m puppet_enterprise,pe_postgresql -c /root/pe.conf
