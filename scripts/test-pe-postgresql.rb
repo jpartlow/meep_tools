@@ -1,6 +1,7 @@
 #! /usr/bin/env ruby
 
-$LOAD_PATH << File.expand_path(File.join(File.dirname(__FILE__),'..','lib'))
+TEST_PE_POSTGRESQL_ROOT_DIR=File.expand_path(File.join(File.dirname(__FILE__),'..'))
+$LOAD_PATH << File.join(TEST_PE_POSTGRESQL_ROOT_DIR,'lib')
 require 'run_shell'
 require 'json'
 require 'thor'
@@ -16,6 +17,13 @@ class TestPostgresql < Thor
     "ubuntu-16.04-amd64",
     "ubuntu-18.04-amd64",
     "sles-12-x86_64",
+  ].freeze
+
+  # Valid package patterns to build (need to be expanded with version)
+  PACKAGES = [
+    "postgresql%s",
+    "postgresql%s-server",
+    "postgresql%s-contrib",
   ].freeze
 
   # Valid pe-postgresql package versions
@@ -64,22 +72,56 @@ class TestPostgresql < Thor
   method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
   def create_hosts
     action('Verify or create hosts') do
-      successful = []
-      options[:platforms].each do |p|
-        host = hosts[p]
-        successful << (live?(host) ?
-          true :
-          create_host_for(p)
-        )
+      all_successful do |results|
+        options[:platforms].each do |p|
+          host = hosts[p]
+          results << (live?(host) ?
+            true :
+            create_host_for(p)
+          )
+        end
+        write_hosts_cache
       end
-      write_hosts_cache
-      successful.all? { |s| s == true }
+    end
+  end
+
+  desc 'mount', 'Mount local $HOME/work/src into each of the fmpooler test hosts'
+  def mount_nfs_hosts
+    action('Create NFS mounts on hosts') do
+      run("bolt plan run integration::nfs_mount -n #{hosts.values.join(',')}", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
+    end
+  end
+
+  desc 'prep', 'Prep a PE install on the hosts with the -p option (download tarball, setup package repository, do not install)'
+  method_option :pe_family, :type => :string, :required => true
+  def prep
+    action('Prep pe on the hosts') do
+      run("bolt plan run integration::prep_pe pe_family=#{options[:pe_family]} -n #{hosts.values.join(',')}", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
+    end
+  end
+
+  desc 'build', 'Build pe-postgresql* packages for platforms, concurrently'
+  method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
+  method_option :packages, :type => :array, :enum => PACKAGES, :default => PACKAGES
+  method_option :version, :type => :string, :enum => VERSIONS, :required => true
+  def build
+    action('Build pe-postgresql packages for a set of platforms') do
+      package_names = options[:packages].map { |p| p % options[:version] }
+      options[:platforms].product(package_names).each do |i|
+#        Thread.new 
+      end
     end
   end
 
   no_commands do
     def io
       TestPostgresql.io
+    end
+
+    def all_successful(&block)
+      results = []
+      yield results
+      results.all? { |s| s == true }
     end
 
     def hosts
