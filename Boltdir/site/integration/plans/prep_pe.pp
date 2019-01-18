@@ -26,7 +26,7 @@ plan integration::prep_pe(
     $check_pe_conf_result = run_command("ls /root/pe.conf", $node, '_catch_errors' => true).first()
     debug($check_pe_conf_result)
     if !$check_pe_conf_result.ok() {
-      file::write("/tmp/tmp.${_pe_version}.pe.conf", "\"puppet_enterprise::primary_master_host\": \"${node.name}\"")
+      file::write("/tmp/tmp.${_pe_version}.pe.conf", "\"puppet_enterprise::puppet_master_host\": \"${node.name}\"")
       upload_file("/tmp/tmp.${_pe_version}.pe.conf", "/root/pe.conf", $node)
     }
     run_command("./${pe_dir}/puppet-enterprise-installer -c /root/pe.conf -p", $node)
