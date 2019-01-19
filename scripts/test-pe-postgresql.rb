@@ -68,6 +68,8 @@ class TestPostgresql < Thor
 
   include RunShellExecutable
 
+  class_option :debug, :type => :boolean, :default => false
+
   desc 'create', 'Generate one or more vmpooler test hosts, if they do not already exist'
   method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
   def create_hosts
@@ -126,6 +128,11 @@ class TestPostgresql < Thor
   end
 
   no_commands do
+    def debugging?
+      # Thor class_option :debug
+      options[:debug]
+    end
+
     def io
       TestPostgresql.io
     end
