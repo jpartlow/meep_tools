@@ -24,6 +24,7 @@ class TestPostgresql < Thor
     "pe-postgresql%s",
     "pe-postgresql%s-server",
     "pe-postgresql%s-contrib",
+    "pe-postgresql%s-devel",
   ].freeze
 
   # Valid pe-postgresql package versions
