@@ -20,7 +20,7 @@ plan integration::prep_pe(
     $platform_tag = integration::platform_tag($node.facts['os'])
     debug("platform_tag ${platform_tag}")
 
-    $get_pe_result = run_task(integration::get_pe, $node, 'platform_tag'          => $platform_tag, 'version' => $_pe_version).first()
+    $get_pe_result = run_task(integration::get_pe, $node, 'platform_tag' => $platform_tag, 'version' => $_pe_version).first()
     $pe_dir = $get_pe_result.value()['pe_dir']
 
     $check_pe_conf_result = run_command("ls /root/pe.conf", $node, '_catch_errors' => true).first()

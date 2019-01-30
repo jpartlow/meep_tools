@@ -8,7 +8,7 @@ function integration::platform_tag(Hash $osfacts) {
       'Debian': {
         "ubuntu-${osfacts['release']['full']}-amd64"
       }
-      'SLES': {
+      'SLES','Suse': {
         "sles-${os_major}-x86_64"
       }
       default: {
