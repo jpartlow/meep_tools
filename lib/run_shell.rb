@@ -105,8 +105,8 @@ module RunShellExecutable
   end
 
   # Execute a command and return the captured stdout and err streams (in one String).
-  def capture(command)
-    run(command, :capture => true)
+  def capture(command, options = {})
+    run(command, options.merge(:capture => true))
   end
 
   # Execute a command and return true for a successful status or false if it fails.
