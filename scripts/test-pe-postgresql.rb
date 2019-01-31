@@ -5,6 +5,7 @@ $LOAD_PATH << File.join(TEST_PE_POSTGRESQL_ROOT_DIR,'lib')
 require 'run_shell'
 require 'json'
 require 'thor'
+require 'diff_matcher'
 
 class TestPostgresql < Thor
   # Hosts cache keeps track of generated vmpooler hosts.
@@ -109,7 +110,7 @@ class TestPostgresql < Thor
   method_option :version, :type => :string, :enum => VERSIONS, :required => true
   def build
     action('Build pe-postgresql packages for a set of platforms (in parallel)') do
-      package_names = options[:packages].map { |p| p % options[:version] }
+      package_names = construct_versioned_package_names
       threads = options[:platforms].product(package_names).map do |i|
         platform, package = i
         Thread.new do
@@ -124,6 +125,99 @@ class TestPostgresql < Thor
       threads.each do |t|
         t.join
         out("Finished: Build #{t[:package]} for #{t[:platform]}")
+      end
+    end
+  end
+
+  desc 'compare_packages', 'Compare contents of pe-postgresql* packages for all platforms'
+  method_option :packages, :type => :array, :enum => PACKAGES, :default => PACKAGES
+  method_option :version, :type => :string, :enum => VERSIONS, :required => true
+  def compare_packages
+    action('Compare pe-postgresql* package file lists for discrepancies') do
+      package_names = construct_versioned_package_names
+      nodes = []
+
+      action('Get package file lists') do
+        output = capture("bolt task run integration::get_package_file_lists packages='#{JSON.dump(package_names)}' -n #{hosts.values.join(',')} --format=json", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
+        output = JSON.parse(output)
+        nodes = output["items"]
+      end
+
+      action('Find overlaps of packages for a given node platform') do
+        overlaps = {}
+
+        nodes.each do |node|
+          platform   = node["result"]["platform"]
+          file_lists = node["result"]["files"]
+          node_name  = node["node"]
+          node_key   = "#{platform}_#{node_name}"
+
+          action("Evaluating #{node_key}:") do
+            overlaps[node_key] = {}
+
+            package_names.each do |package|
+              action("Package #{package}:") do
+                other_packages = package_names - [package]
+                other_packages.each do |other|
+                  overlap = file_lists[package] & file_lists[other]
+                  overlaps[node_key][package] = overlap
+                  if overlap.empty?
+                    out(green("Has no overlap with #{other}"))
+                  else
+                    out(red("Overlaps #{other}:"))
+                    out(overlap.pretty_inspect)
+                  end
+                end
+              end
+            end
+          end
+
+          action('Looking for mismatched binary files') do
+            binaries = package_names.reduce({}) do |hash,p|
+              hash[p] = file_lists[p].grep(%r{/opt/puppetlabs/server/apps/postgresql/[\d.]+/bin/})
+              hash
+            end
+
+            binaries.each do |package,bin_paths|
+              action("from #{package}") do
+                package_names.each do |other_package|
+                  next if package == other_package
+                  action("in #{other_package}") do
+                    bin_paths.each do |full_path|
+                      bin = full_path.split('/').last
+                      refs = file_lists[other_package].grep(%r{/#{bin}(?:[^/]*)$})
+                      if refs.empty?
+                        out(grey("no references to #{bin} found"))
+                      else
+                        out(red("found #{bin}:"))
+                        out(refs.pretty_inspect, :bump_level => 1)
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+
+        action('Looking for differences in overlaps between platforms') do
+          if overlaps.values.uniq.length == 1
+            out('no platform differences')
+          else
+            index = overlaps.keys.first
+            other_platforms = overlaps.keys - [index]
+            other_platforms.each do |other|
+              action("Diffing #{index} with #{other}") do
+                diff = DiffMatcher.difference(overlaps[index], overlaps[other], :color_scheme => :black_background)
+                if diff.nil?
+                  out(green('no difference'))
+                else
+                  out(diff)
+                end
+              end
+            end
+          end
+        end
       end
     end
   end
@@ -183,6 +277,10 @@ class TestPostgresql < Thor
 
     def write_hosts_cache(hosts_cache_path = TestPostgresql.hosts_cache_file)
       TestPostgresql.write_hosts_cache(hosts, hosts_cache_path)
+    end
+
+    def construct_versioned_package_names
+      options[:packages].map { |p| p % options[:version] }
     end
   end
 end

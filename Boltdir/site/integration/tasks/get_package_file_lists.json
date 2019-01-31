@@ -1,0 +1,10 @@
+{
+  "description": "Return a JSON hash of the files managed by the passed packages.",
+  "input_method": "stdin",
+  "parameters": {
+    "packages": {
+      "description": "List of packages to interrogate.",
+      "type": "Array[String]"
+    }
+  }
+}
