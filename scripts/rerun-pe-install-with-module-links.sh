@@ -1,8 +1,9 @@
 #! /bin/bash
 
+#set -x
 set -e
 
-while getopts d:m:c: opt; do
+while getopts d:m:c:p opt; do
   case "$opt" in
     d)
       pe_dir="${OPTARG?}"
@@ -13,6 +14,9 @@ while getopts d:m:c: opt; do
     c)
       _pe_conf_path="${OPTARG?}"
       ;; 
+    p)
+      prep_arg='-p'
+      ;;
   esac
 done
 
@@ -23,6 +27,7 @@ if [ -z "${pe_dir}" ]; then
   echo " -d - path to the exploded pe tarball directory to re-install from"
   echo " -m - comma separated list of modules to link into the base and enterprise modulepaths from /jpartlow-src before final installation configure"
   echo " -c - path to a pe.conf file, if there isn't one already in the /root directory"
+  echo " -p - just run a prep install (setup package repo and install puppet-agent pe-modules)"
   echo
   echo "This script will uninstall PE, prep an install, then link the requested modules before calling the final configure so you can test an install with updated module code without rebuilding a tarball."
   exit 1
@@ -49,5 +54,5 @@ pushd "${pe_dir}"
   fi
   # run the actual installation (this assumes that /root/pe.conf has
   # whatever parameters we need to test already.
-  ./puppet-enterprise-installer -c "${pe_conf_path}"
+  ./puppet-enterprise-installer -c "${pe_conf_path}" "${prep_arg}"
 popd

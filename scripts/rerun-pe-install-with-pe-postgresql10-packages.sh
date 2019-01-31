@@ -13,24 +13,29 @@
 #set -x
 set -e
 
-while getopts m: opt; do
+while getopts v:m:p opt; do
   case "$opt" in
+    v)
+      postgres_major_version="${OPTARG?}"
+      ;;
     m)
       pe_modules_arg="-m ${OPTARG?}"
+      ;;
+    p)
+      prep_arg='-p'
       ;;
   esac
 done
 
-postgres_major_version=$1
-
 if [ "${postgres_major_version}" != "9.6" ] &&
    [ "${postgres_major_version}" != "10" ] &&
    [ "${postgres_major_version}" != "11" ]; then
-  echo "Usage: re-run-pe-install-wtih-pe-postgresql-packages.sh <postgres_version> [-m modules,to,link]"
-  echo "  where <postgres_version> should be the major version without punctuation"
+  echo "Usage: re-run-pe-install-wtih-pe-postgresql-packages.sh -v postgres_version> [-m modules,to,link]"
+  echo "  -v where <postgres_version> should be the major version without punctuation"
   echo "    (so 9.6, 10 or 11...)"
   echo "  -m <modules,list> an optional comma separated list of pe-modules to link"
   echo "    from jpartlow-src. (skip the 'puppetlabs-' prefix)"
+  echo "  -p to just prep an install"
   exit 1
 fi
 
@@ -200,4 +205,6 @@ else
 fi
 
 # retry pe installation
-/jpartlow-src/integration-tools/scripts/rerun-pe-install-with-module-links.sh -d "${pe_dir}" "${pe_modules_arg}" -c /root/pe.conf
+# (quoting the args passes '' which messes with option parsing...)
+# shellcheck disable=SC2086
+/jpartlow-src/integration-tools/scripts/rerun-pe-install-with-module-links.sh -d "${pe_dir}" -c /root/pe.conf ${pe_modules_arg} ${prep_arg}
