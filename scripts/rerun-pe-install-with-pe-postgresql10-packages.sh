@@ -199,7 +199,7 @@ SHA256:
 esac
 
 if grep -E '^[^#]*postgres_version_override' "/root/pe.conf"; then
-  sed -e "/postgres_version_override/ s/\"[0-9]\+\"/\"${postgres_major_version}\"/" -i "/root/pe.conf"
+  sed -e "/postgres_version_override/ s/\"[0-9]\+\(\.[0-9]\+\)\?\"/\"${postgres_major_version}\"/" -i "/root/pe.conf"
 else
   sed -e "/puppet_master_host/ a \"puppet_enterprise::postgres_version_override\": \"${postgres_major_version}\"" -i "/root/pe.conf"
 fi
