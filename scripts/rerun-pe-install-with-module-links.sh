@@ -36,10 +36,10 @@ fi
 pushd "${pe_dir}"
   # unlink modules (particularly a problem on ubuntu)
   for m in $pe_modules; do
-    if [ -s "/opt/puppetlabs/puppet/modules/${m}" ]; then
+    if [ -L "/opt/puppetlabs/puppet/modules/${m}" ]; then
       rm "/opt/puppetlabs/puppet/modules/${m}"
     fi
-    if [ -s "/opt/puppetlabs/server/data/environments/enterprise/modules/${m}" ]; then
+    if [ -L "/opt/puppetlabs/server/data/environments/enterprise/modules/${m}" ]; then
       rm "/opt/puppetlabs/server/data/environments/enterprise/modules/${m}"
     fi
   done
