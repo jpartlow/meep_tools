@@ -113,14 +113,21 @@ class TestPostgresql < Thor
       package_names = construct_versioned_package_names
       threads = options[:platforms].product(package_names).map do |i|
         platform, package = i
-        Thread.new do
-          Thread.current[:platform] = platform
-          Thread.current[:package] = package
-          Thread.current[:level] = Thread.main[:level] || 0
-          action("Starting: Build #{package} for #{platform}...") do
-            run("bundle exec build #{package} #{platform}", :chdir => '/s/puppet-enterprise-vanagon')
-          end
-        end
+        package_build_thread(platform, package)
+      end
+      threads.each do |t|
+        t.join
+        out("Finished: Build #{t[:package]} for #{t[:platform]}")
+      end
+    end
+  end
+
+  desc 'build_common', 'Build pe-postgresql-common package for platforms, concurrently'
+  method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
+  def build_common
+    action('Build pe-postgresql-common package for a set of platforms (in parallel)') do
+      threads = options[:platforms].map do |platform|
+        package_build_thread(platform, 'pe-postgresql-common')
       end
       threads.each do |t|
         t.join
@@ -281,6 +288,17 @@ class TestPostgresql < Thor
 
     def construct_versioned_package_names
       options[:packages].map { |p| p % options[:version] }
+    end
+
+    def package_build_thread(platform, package)
+      Thread.new do
+        Thread.current[:platform] = platform
+        Thread.current[:package] = package
+        Thread.current[:level] = Thread.main[:level] || 0
+        action("Starting: Build #{package} for #{platform}...") do
+          run("bundle exec build #{package} #{platform}", :chdir => '/s/puppet-enterprise-vanagon')
+        end
+      end
     end
   end
 end
