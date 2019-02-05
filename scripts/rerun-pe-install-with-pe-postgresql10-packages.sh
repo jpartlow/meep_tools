@@ -79,7 +79,7 @@ case "$os" in
 
     # sign packages (sign any built versioned packages, since we might want to
     # install side by side)
-    for package in ${pe_package_dir}/pe-postgresql{96,10,11}*; do
+    for package in ${pe_package_dir}/pe-postgresql{96,10,11}* ${pe_package_dir}/pe-postgresql-common*; do
       if [ -f "$package" ]; then
         echo "$package"
 
