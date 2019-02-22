@@ -92,7 +92,7 @@ class TestPostgresql < Thor
   desc 'mount', 'Mount local $HOME/work/src into each of the fmpooler test hosts'
   def mount_nfs_hosts
     action('Create NFS mounts on hosts') do
-      run("bolt plan run integration::nfs_mount -n #{hosts.values.join(',')}", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
+      run("bolt plan run meep_tools::nfs_mount -n #{hosts.values.join(',')}", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
     end
   end
 
@@ -100,7 +100,7 @@ class TestPostgresql < Thor
   method_option :pe_family, :type => :string, :required => true
   def prep
     action('Prep pe on the hosts') do
-      run("bolt plan run integration::prep_pe pe_family=#{options[:pe_family]} -n #{hosts.values.join(',')}", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
+      run("bolt plan run meep_tools::prep_pe pe_family=#{options[:pe_family]} -n #{hosts.values.join(',')}", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
     end
   end
 
@@ -145,7 +145,7 @@ class TestPostgresql < Thor
       nodes = []
 
       action('Get package file lists') do
-        output = capture("bolt task run integration::get_package_file_lists packages='#{JSON.dump(package_names)}' -n #{hosts.values.join(',')} --format=json", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
+        output = capture("bolt task run meep_tools::get_package_file_lists packages='#{JSON.dump(package_names)}' -n #{hosts.values.join(',')} --format=json", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
         output = JSON.parse(output)
         nodes = output["items"]
       end

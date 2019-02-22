@@ -1,4 +1,4 @@
-function integration::platform_tag(Hash $osfacts) {
+function meep_tools::platform_tag(Hash $osfacts) {
     $os_family = $osfacts['family']
     $os_major  = $osfacts['release']['major']
     case $os_family {

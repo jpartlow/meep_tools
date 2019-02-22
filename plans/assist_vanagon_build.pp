@@ -12,7 +12,7 @@
 # to halt execution before vanagon tries to ensure the dependencies are installed,
 # and then run this plan against the vanagon host to get the locally built
 # packages installed.
-plan integration::assist_vanagon_build(
+plan meep_tools::assist_vanagon_build(
   TargetSpec $nodes,
   Enum['96','10','11'] $postgres_version,
   # Absolute path to the local Vanagon directory containing pre-built
@@ -89,7 +89,7 @@ plan integration::assist_vanagon_build(
       }
       debug("osfamily: ${osfamily}")
       debug("_osfamily: ${_osfamily}")
-      debug('ok')
+
       if $osfamily == 'Debian' {
         # 16.04: comerr-dev krb5-multidev libgssrpc4 libkadm5clnt-mit9 libkadm5srv-mit9 libkdb5-8 libkrb5-dev
         # 18.04: comerr-dev krb5-multidev libcom-err2 libgssapi-krb5-2 libgssrpc4 libk5crypto3 libkadm5clnt-mit11 libkadm5srv-mit11 libkdb5-9 libkrb5-3 libkrb5-dev libkrb5support0
@@ -97,7 +97,7 @@ plan integration::assist_vanagon_build(
           ensure => present,
         }
       }
-      debug('oops')
+
       package { "pe-postgresql${postgres_version}":
         ensure   => present,
         provider => $provider,
