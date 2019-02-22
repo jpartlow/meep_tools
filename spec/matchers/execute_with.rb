@@ -6,7 +6,7 @@ RSpec::Matchers.define(:execute) do
 
     allow(RunShellExecutable).to receive(:executor).and_return(TestExecutor.new)
 
-    if klass_or_instance.kind_of?(Thor)
+    if defined?(Thor) == 'constant' && klass_or_instance.kind_of?(Thor)
       @runner = klass_or_instance
       @runner.class.io = @stdout_tmp
     else

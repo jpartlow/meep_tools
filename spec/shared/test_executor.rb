@@ -52,7 +52,7 @@ class TestExecutor
     end
   end
 
-  def exec(command)
+  def exec(command, _options)
     TestExecutor.commands << command
     response = TestExecutor.find_response(command)
     return *response

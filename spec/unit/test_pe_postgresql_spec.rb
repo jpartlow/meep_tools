@@ -8,7 +8,7 @@ require 'test-pe-postgresql'
 describe 'TestPostgresql' do
 
   def load_json_file(path)
-    file = File.new(test_hosts_cache_path)
+    file = File.new(path)
     JSON.load(file)
   end
 
@@ -17,13 +17,17 @@ describe 'TestPostgresql' do
   end
 
   let(:tmpdir) { Dir.mktmpdir('test-pe-postgresql') }
-  let(:test_hosts_cache_path) { File.join(fixtures_path, 'test-pe-postgresql', 'test-pe-postgresql.json') }
+  let(:test_hosts_cache_path) { File.join(SpecHelpers.fixtures_path, 'test-pe-postgresql', 'test-pe-postgresql.json') }
   let(:cache) { load_json_file(test_hosts_cache_path) }
 
   it { expect(TestPostgresql.new).to be_kind_of(TestPostgresql) }
 
   context 'reading and writing config' do
     let(:tmp_hosts_cache_path) { "#{tmpdir}/test.json" }
+
+    before(:each) do
+      allow(TestPostgresql).to receive(:hosts_cache).and_return(tmp_hosts_cache_path)
+    end
 
     it do
       expect(TestPostgresql.read_hosts_cache(test_hosts_cache_path)).to eq(cache)
@@ -46,10 +50,10 @@ describe 'TestPostgresql' do
       RSpec.shared_examples('writes modified configuration') do
         it do
           tester = TestPostgresql.new
-  
+
           tester.hosts['el-6-x86_64'] = 'foo.net'
           tester.hosts['el-7-x86_64'] = 'foo7.net'
-  
+
           expect(tester.write_hosts_cache(tmp_hosts_cache_path)).to eq(true)
           expect(TestPostgresql.read_hosts_cache(tmp_hosts_cache_path)).to match_array(
             'el-6-x86_64' => 'foo.net',
@@ -100,7 +104,7 @@ describe 'TestPostgresql' do
             /floaty get centos-6-x86_64/,
             /floaty get ubuntu-1804-x86_64/,
             /floaty get sles-12-x86_64/,
-          ]) 
+          ])
       )
       expect(tester.hosts).to match({
         'el-6-x86_64' => /^\w+\.delivery\.puppetlabs\.net$/,

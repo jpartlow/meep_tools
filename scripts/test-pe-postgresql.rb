@@ -34,8 +34,12 @@ class TestPostgresql < Thor
     "96",
   ].freeze
 
+  def self.hosts_cache
+    HOSTS_CACHE
+  end
+
   def self.hosts_cache_file
-    File.expand_path(HOSTS_CACHE)
+    File.expand_path(self.hosts_cache)
   end
 
   def self.read_hosts_cache(hosts_cache_path = self.hosts_cache_file)
