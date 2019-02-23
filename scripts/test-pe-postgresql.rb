@@ -93,7 +93,7 @@ class TestPostgresql < Thor
     end
   end
 
-  desc 'mount', 'Mount local $HOME/work/src into each of the fmpooler test hosts'
+  desc 'mount', 'Mount local $HOME/work/src into each of the vmpooler test hosts'
   def mount_nfs_hosts
     action('Create NFS mounts on hosts') do
       run("bolt plan run meep_tools::nfs_mount -n #{hosts.values.join(',')}", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)

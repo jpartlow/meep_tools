@@ -1,10 +1,15 @@
 # Mount workstation source directory via nfs into each of the given target hosts.
 plan meep_tools::nfs_mount(
   TargetSpec $nodes,
-  String $source_dir     = '/home/jpartlow/work/src',
-  String $target_mount_dir = '/jpartlow-src',
+  String $source_dir     = 'work/src',
   Optional[Meep_tools::Ip4] $workstation_ip = undef,
 ) {
+  $user = system::env('USER')
+  $home = system::env('HOME')
+
+  $target_mount_dir = "/${user}-src"
+  $_source_dir = "${home}/$source_dir"
+
   # Using Boltdir/inventory.yaml to provide configuration defaults for localhost
   # since hiera is not (yet?) available for plans (outside of apply blocks).
   $localhost = get_targets('localhost')[0]
@@ -20,12 +25,12 @@ plan meep_tools::nfs_mount(
     debug("target_ip: ${target_ip}")
 
     run_task(meep_tools::add_nfs_exports, localhost,
-      'source_dir' => $source_dir,
+      'source_dir' => $_source_dir,
       'target_ip'  => $target_ip
     )
     run_task(meep_tools::mount_nfs_dir, $target,
       'source_ip'      => $_workstation_ip,
-      'source_dir'     => $source_dir,
+      'source_dir'     => $_source_dir,
       'local_mount_dir'  => $target_mount_dir
     )
   }
