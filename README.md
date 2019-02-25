@@ -1,5 +1,47 @@
 Various utility scripts cobbled together for installer dev work.
 
+# Setup
+
+This repository is a Puppet module, with some standalone scripts and a number
+of Bolt plans and tasks.
+
+In order to make use of the Bolt plans and tasks, your local installation of
+Bolt needs to be aware of the module.
+
+For my use, I did the following:
+
+1. Ensure puppet-bolt is installed
+   * If dpkg/yum doesn't yet have repo configuration that can find a current
+     puppet-bolt, then wget and install an appropriate puppet-release package
+from apt.puppetlabs.com or yum.puppetlabs.com
+   * Once that's installed, yum or apt install puppet-bolt
+1. Configure your bolt modulepath
+   * Update (probably create) your .puppetlabs/bolt/bolt.yaml
+
+```yaml
+modulepath: "<HOME>/.puppetlabs/bolt-code/modules"
+format: human
+ssh:
+  host-key-check: false
+  user: root
+```
+
+(Update you're \<HOME\> path). The modulepath is key, it does not have to be
+.puppetlabs/bolt-code/modules, but Bolt needs to know where to find modules
+that you want to run plans and tasks from.
+
+1. Once that is set up, symlink meep_tools into the modules dir listed in the
+   modulepath.
+
+You should now be able to `bolt plan show` and see several meep_tools::
+namespaced plans listed, such as meep_tools::assist_vanagon_build and
+meep_tools::nfs_mount.
+
+The host-key-check must be set to false so that Bolt doesn't abort connecting
+to Pooler hosts that identify with self signed certs (I believe?).  Setting
+user to root is a convenience over specifying it; although the
+test-pe-postgresql.rb script probably relies on it.
+
 # test-pe-postgresql.rb
 
 Used to assist with building and testing pe-postgresql packages from
