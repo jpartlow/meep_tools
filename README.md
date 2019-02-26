@@ -102,6 +102,43 @@ The prep command grabs the latest build (you must specify pe_family, currently
 'puppet-enterprise-installer -p' (prep mode), which unpacks, sets up the
 package repository locally, but does not install.
 
+## build
+
+The script will build all of the packages required for pe-postgresql in parallel.
+You will need to either run the command while your current working directory is the
+puppet-enterprise-vanagon folder, or specify where this folder exists with the 
+--vanagon_path flag.
+
+```sh
+/s/meep_tools/scripts/test-pe-postgresql.rb build --version 11 --vanagon_path=<path_to_puppet-enterprise-vanagon>
+```
+
+## building pgrepack
+
+pgrepack requires the -devel package to be available on the vmpooler host vanagon is using to build.
+In order to test the pe-postgresql packages before they get promoted, you will need to
+pry into the build process to pause it, install the packages, and then continue the build.
+
+To do this, clone puppetlabs/vanagon.  Add a binding.pry statement [here](https://github.com/puppetlabs/vanagon/blob/master/lib/vanagon/driver.rb#L108). You will also need to add pry-byebug to the puppet-enterprise-vanagon Gemfile.
+
+To run the build, from inside the puppet-enterprise-vanagon folder, do 
+```sh
+VANAGON_LOCATION=file://$HOME/path/to/vanagon/folder bundle exec build pe-postgresql11-pgrepack <platform>
+```
+
+When the pry statement is hit, run 
+```
+bolt plan run meep_tools::assist_vanagon_build postgres_version=11 output_dir=/path/to/puppet_enterprise_vanagon/output nodes=<node used for build>
+```
+
+Note that currently on Ubuntu 16.04, due to an issue with public keys, before running the bolt plan,
+you will need to log into the vmpooler host, run apt-get update, and note the key it prints after "NO_PUBKEY".
+Then do
+```
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys <key>
+```
+Then continue with running the bolt plan.
+
 # rerun-pe-install-with-pe-postgresql10-packages.sh
 
 This script needs to be run from each vm. So, assuming you have vms with nfs
@@ -111,6 +148,10 @@ prepped (also above), you should be able to:
 ```sh
 /$USER/meep_tools/script/rerun-pe-install-with-pe-postgresql10-packages.sh -v 10
 ```
+
+/$HOME/work/src should include the meep_tools folder, a clone of the frankenbuilder
+repo, and the puppet-enterprise-vanagon folder that contains the packages in the output
+folder after running the build command (see above).
 
 To begin the process of getting the packages copied in, signed, metadata
 rebuilt, and launching puppet-enterprise-configure with the correct
