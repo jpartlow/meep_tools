@@ -8,6 +8,8 @@ require 'thor'
 require 'diff_matcher'
 
 class TestPostgresql < Thor
+  class_option :vanagon_path
+  
   # Hosts cache keeps track of generated vmpooler hosts.
   HOSTS_CACHE = "~/.test-pe-postgresql.json"
 
@@ -30,6 +32,7 @@ class TestPostgresql < Thor
 
   # Valid pe-postgresql package versions
   VERSIONS = [
+    "11",
     "10",
     "96",
   ].freeze
@@ -114,10 +117,15 @@ class TestPostgresql < Thor
   method_option :version, :type => :string, :enum => VERSIONS, :required => true
   def build
     action('Build pe-postgresql packages for a set of platforms (in parallel)') do
+      vanagon_path = options[:vanagon_path] ? "#{options[:vanagon_path]}" : Dir.pwd
+      if !vanagon_path.include?('puppet-enterprise-vanagon')
+        out(red("Please specify the puppet-enterprise-vanagon path with the --vanagon-path flag, or run this command from inside the puppet-enterprise-vanagon directory"))
+        return
+      end
       package_names = construct_versioned_package_names
       threads = options[:platforms].product(package_names).map do |i|
         platform, package = i
-        package_build_thread(platform, package)
+        package_build_thread(platform, package, vanagon_path)
       end
       threads.each do |t|
         t.join
@@ -130,8 +138,13 @@ class TestPostgresql < Thor
   method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
   def build_common
     action('Build pe-postgresql-common package for a set of platforms (in parallel)') do
+      vanagon_path = options[:vanagon_path] ? "#{options[:vanagon_path]}" : Dir.pwd
+      if !vanagon_path.include?('puppet-enterprise-vanagon')
+        out(red("Please specify the puppet-enterprise-vanagon path with the --vanagon-path flag, or run this command from inside the puppet-enterprise-vanagon directory"))
+        return
+      end
       threads = options[:platforms].map do |platform|
-        package_build_thread(platform, 'pe-postgresql-common')
+        package_build_thread(platform, 'pe-postgresql-common', vanagon_path)
       end
       threads.each do |t|
         t.join
@@ -294,13 +307,13 @@ class TestPostgresql < Thor
       options[:packages].map { |p| p % options[:version] }
     end
 
-    def package_build_thread(platform, package)
+    def package_build_thread(platform, package, vanagon_path)
       Thread.new do
         Thread.current[:platform] = platform
         Thread.current[:package] = package
         Thread.current[:level] = Thread.main[:level] || 0
         action("Starting: Build #{package} for #{platform}...") do
-          run("bundle exec build #{package} #{platform}", :chdir => '/s/puppet-enterprise-vanagon')
+          run("bundle exec build #{package} #{platform}", :chdir => vanagon_path)
         end
       end
     end

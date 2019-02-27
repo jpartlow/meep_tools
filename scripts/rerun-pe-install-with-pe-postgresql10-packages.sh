@@ -13,6 +13,8 @@
 #set -x
 set -e
 
+nfs_mnt=`find / -maxdepth 1 -name "*-src"`
+
 while getopts v:m:p opt; do
   case "$opt" in
     v)
@@ -57,7 +59,7 @@ pe_package_dir="${pe_dir}/packages/${platform}"
 cd /root || exit 1
 
 # get gpg keys
-cp -r /jpartlow-src/frankenbuilder/gpg /root
+cp -r "$nfs_mnt"/frankenbuilder/gpg /root
 set +e
 gpg --import gpg/GPG-KEY-frankenbuilder
 # gpg --import returns 2 when key is already present
@@ -72,7 +74,7 @@ case "$os" in
     yum install -y tree vim rpm-sign createrepo expect
 
     # cp my dev postgres packages into the pe tarball
-    cp /jpartlow-src/puppet-enterprise-vanagon/output/"$os"/"$os_ver"/products/x86_64/*.rpm "${pe_package_dir}"
+    cp "$nfs_mnt"/puppet-enterprise-vanagon/output/"$os"/"$os_ver"/products/x86_64/*.rpm "${pe_package_dir}"
 
     # ensure pub key is imported into rpm
     rpm --import gpg/GPG-KEY-frankenbuilder.pub
@@ -125,7 +127,7 @@ EOF
     zypper install -y tree vim createrepo
 
     # cp my dev postgres packages into the pe tarball
-    cp /jpartlow-src/puppet-enterprise-vanagon/output/"$os"/"$os_ver"/products/x86_64/*.rpm "${pe_package_dir}"
+    cp "$nfs_mnt"/puppet-enterprise-vanagon/output/"$os"/"$os_ver"/products/x86_64/*.rpm "${pe_package_dir}"
 
     # ensure pub key is imported into rpm
     rpm --import gpg/GPG-KEY-frankenbuilder.pub
@@ -142,7 +144,7 @@ EOF
   ubuntu)
     apt install -y tree vim dpkg-dev
 
-    cp /jpartlow-src/puppet-enterprise-vanagon/output/deb/"$codename"/*.deb "${pe_package_dir}"
+    cp "$nfs_mnt"/puppet-enterprise-vanagon/output/deb/"$codename"/*.deb "${pe_package_dir}"
 
     # shellcheck disable=SC2002
     cat /root/gpg/GPG-KEY-frankenbuilder.pub | apt-key add -
@@ -207,4 +209,4 @@ fi
 # retry pe installation
 # (quoting the args passes '' which messes with option parsing...)
 # shellcheck disable=SC2086
-/jpartlow-src/integration-tools/scripts/rerun-pe-install-with-module-links.sh -d "${pe_dir}" -c /root/pe.conf ${pe_modules_arg} ${prep_arg}
+"$nfs_mnt"/meep_tools/scripts/rerun-pe-install-with-module-links.sh -d "${pe_dir}" -c /root/pe.conf ${pe_modules_arg} ${prep_arg}
