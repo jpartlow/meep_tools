@@ -6,3 +6,4 @@ windows/
 vagrant-windows-puppet
 Gemfile.lock
 Boltdir/inventory.yaml
+spec/fixtures/modules

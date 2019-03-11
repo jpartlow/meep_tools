@@ -1,0 +1,4 @@
+nodes:
+  - name: 'localhost'
+    vars:
+      workstation_ip: '10.2.3.4'

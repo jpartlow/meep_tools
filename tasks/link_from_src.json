@@ -1,0 +1,17 @@
+{
+  "description": "Moves a given installed directory into /root/_meep_tools_backups, and links in a given source directory in its place. Used to override scripts in an installed system with nfs mounted source code from a dev workstation.",
+  "input_method": "stdin",
+  "parameters": {
+    "source_dir": {
+      "description": "Absolute path of the source directory to link to.",
+      "type": "String"
+    },
+    "target_dir": {
+      "description": "Absolute path of the target directory to backup and replace with a symlink to source_dir.",
+      "type": "String"
+    }
+  },
+  "files": [
+    "meep_tools/lib/meep_tools/"
+  ]
+}

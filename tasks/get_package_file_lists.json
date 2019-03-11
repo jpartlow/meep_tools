@@ -6,5 +6,8 @@
       "description": "List of packages to interrogate.",
       "type": "Array[String]"
     }
-  }
+  },
+  "files": [
+    "meep_tools/lib/meep_tools/"
+  ]
 }
