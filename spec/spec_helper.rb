@@ -1,13 +1,18 @@
+require 'pp'
+require 'pry-byebug'
 require 'rspec'
 
 RSpec.configure do |c|
+  # Disable deprecated rspec mocks 'should' syntax so that rspec-mocks doesn't add
+  # :stub to BasicObject. Its presence causes an error with Bolt's ruby_smb library
+  # which also expects to be able to create a :stub method on objects.
+  c.mock_with :rspec do |mocks|
+    mocks.syntax = :expect
+  end
   c.mock_with :rspec
 end
-require 'puppetlabs_spec_helper/module_spec_helper'
-require 'bolt'
 require 'bolt_spec/plans'
-require 'pp'
-require 'pry-byebug'
+require 'puppetlabs_spec_helper/module_spec_helper'
 
 require 'spec_helper_local' if File.file?(File.join(File.dirname(__FILE__), 'spec_helper_local.rb'))
 
