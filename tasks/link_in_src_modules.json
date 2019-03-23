@@ -1,5 +1,5 @@
 {
-  "description": "Link source PE modules in place of installed modules in both the basemodulepath and enterprise modulepath. Modules must be present in the meep_tools::nfs_mount dir. Copies originals to /root/_meep_tools_backups.",
+  "description": "Link source PE modules in place of installed modules in both the basemodulepath and enterprise modulepath. Modules must be present in the meep_tools::nfs_mount dir. Copies originals to /root/_meep_tools_backups. Assumes puppet-enterprise-modules.",
   "input_method": "stdin",
   "parameters": {
     "modules": {
