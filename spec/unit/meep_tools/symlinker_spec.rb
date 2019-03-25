@@ -165,11 +165,11 @@ describe 'meep_tools/symlinker' do
       end
 
       it do
-        expect { tester.link_module('foo', remote_src_fixture_dir) }.to raise_error(RuntimeError, /Module foo not present\. Available modules:\n\[(?:"(?:puppet_enterprise|pe_install|pe_manager)"(?:, )?){3}\]/)
+        expect { tester.link_module('foo', modules_root: remote_src_fixture_dir) }.to raise_error(RuntimeError, /Module foo not present\. Available modules:\n\[(?:"(?:puppet_enterprise|pe_install|pe_manager)"(?:, )?){3}\]/)
       end
 
-      it do
-        expect { tester.link_module('puppet_enterprise', remote_src_fixture_dir) }.to output(<<-EOM).to_stdout
+      it 'links to both modulepaths by default' do
+        expect { tester.link_module('puppet_enterprise', modules_root: remote_src_fixture_dir) }.to output(<<-EOM).to_stdout
 --> Replacing /opt/puppetlabs/puppet/modules/puppet_enterprise with a link to /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise
 --> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise with a link to /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise
         EOM
@@ -181,6 +181,52 @@ describe 'meep_tools/symlinker' do
           match('mv -T /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
           match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
         ])
+      end
+
+      it 'links only to basemodulepath' do
+        expect { tester.link_module('puppet_enterprise', link: 'base', modules_root: remote_src_fixture_dir) }.to output(%r{\A--> Replacing /opt/puppetlabs/puppet/modules/puppet_enterprise.*\Z}).to_stdout
+        expect(runner.commands).to match([
+          match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/puppet/modules'),
+          match('mv -T /opt/puppetlabs/puppet/modules/puppet_enterprise /root/_meep_tools_backups/opt/puppetlabs/puppet/modules/puppet_enterprise'),
+          match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise /opt/puppetlabs/puppet/modules/puppet_enterprise'),
+        ])
+      end
+
+      it 'links only to enterprise modulepath' do
+        expect { tester.link_module('puppet_enterprise', link: 'enterprise', modules_root: remote_src_fixture_dir) }.to output(%r{\A--> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise.*\Z}).to_stdout
+        expect(runner.commands).to match([
+          match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules'),
+          match('mv -T /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
+          match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
+        ])
+      end
+
+      it 'links to both modulepaths' do
+        expect { tester.link_module('puppet_enterprise', link: 'both', modules_root: remote_src_fixture_dir) }.to output(%r{--> Replacing /opt/puppetlabs/puppet/modules/puppet_enterprise.*--> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise}m).to_stdout
+        expect(runner.commands).to match([
+          match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/puppet/modules'),
+          match('mv -T /opt/puppetlabs/puppet/modules/puppet_enterprise /root/_meep_tools_backups/opt/puppetlabs/puppet/modules/puppet_enterprise'),
+          match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise /opt/puppetlabs/puppet/modules/puppet_enterprise'),
+          match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules'),
+          match('mv -T /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
+          match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
+        ])
+      end
+
+      context 'pe_manager' do
+        it 'only links pe_manager in the enterprise path' do
+          expect { tester.link_module('pe_manager', link: 'both', modules_root: remote_src_fixture_dir) }.to output(%r{\A--> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/pe_manager}m).to_stdout
+          expect(runner.commands).to match([
+            match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules'),
+            match('mv -T /opt/puppetlabs/server/data/environments/enterprise/modules/pe_manager /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules/pe_manager'),
+            match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/pe_manager /opt/puppetlabs/server/data/environments/enterprise/modules/pe_manager'),
+          ])
+        end
+
+        it 'does nothing if forced base' do
+          expect { tester.link_module('pe_manager', link: 'base', modules_root: remote_src_fixture_dir) }.to output(%r{\A--> Note: requested base link of pe_manager skipped}).to_stdout
+          expect(runner.commands).to be_empty
+        end
       end
     end
   end

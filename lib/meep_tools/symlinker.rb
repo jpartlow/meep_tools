@@ -21,11 +21,17 @@ module MeepTools
       pem_modules.merge(other_modules)
     end
 
-    def link_module(module_name, modules_root = remote_src_dir)
+    def link_module(module_name, link: 'both', modules_root: remote_src_dir)
+      base_module = ['both','base'].include?(link) && module_name != 'pe_manager'
+      enterprise_module = ['both','enterprise'].include?(link)
+
       available = available_modules(modules_root)
       if  source_dir = available[module_name]
-        link_directory(source_dir, "#{PUPPET_MODULES_PATH}/#{module_name}")
-        link_directory(source_dir, "#{ENTERPRISE_MODULES_PATH}/#{module_name}")
+        link_directory(source_dir, "#{PUPPET_MODULES_PATH}/#{module_name}") if base_module
+        link_directory(source_dir, "#{ENTERPRISE_MODULES_PATH}/#{module_name}") if enterprise_module
+        if !(base_module || enterprise_module)
+          puts "--> Note: requested #{link} link of #{module_name} skipped because it is not applicable."
+        end
       else
         raise(RuntimeError, "Module #{module_name} not present. Available modules:\n#{available.keys.pretty_inspect}")
       end
