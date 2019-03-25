@@ -1,5 +1,36 @@
 module MeepTools
   module Symlinker
+    PUPPET_MODULES_PATH     = "/opt/puppetlabs/puppet/modules"
+    ENTERPRISE_MODULES_PATH = "/opt/puppetlabs/server/data/environments/enterprise/modules"
+
+    def remote_src_dir
+      "/#{ENV['USER']}-src"
+    end
+
+    def available_modules(modules_root = remote_src_dir)
+      pem_modules = Dir.glob("#{modules_root}/puppet-enterprise-modules/modules/*").inject({}) do |hash,path|
+        mod = path.split('/').last
+        hash[mod] = path
+        hash
+      end
+      other_modules = Dir.glob("#{modules_root}/pe-modules/*").inject({}) do |hash,path|
+        mod = path.split('/').last.gsub(/^puppetlabs-/,'')
+        hash[mod] = path
+        hash
+      end
+      pem_modules.merge(other_modules)
+    end
+
+    def link_module(module_name, modules_root = remote_src_dir)
+      available = available_modules(modules_root)
+      if  source_dir = available[module_name]
+        link_directory(source_dir, "#{PUPPET_MODULES_PATH}/#{module_name}")
+        link_directory(source_dir, "#{ENTERPRISE_MODULES_PATH}/#{module_name}")
+      else
+        raise(RuntimeError, "Module #{module_name} not present. Available modules:\n#{available.keys.pretty_inspect}")
+      end
+    end
+
     def link_directory(source_dir, target_dir)
       puts "--> Replacing #{target_dir} with a link to #{source_dir}"
       if !File.symlink?(target_dir)

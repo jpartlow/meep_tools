@@ -35,3 +35,5 @@ RSpec.configure do |c|
   c.before(:suite) { BoltSpec::Plans.init }
   c.filter_run_excluding(bolt: true) unless ENV['GEM_BOLT']
 end
+
+RSpec::Support::ObjectFormatter.default_instance.max_formatted_output_length = 999
