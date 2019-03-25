@@ -3,23 +3,13 @@ require 'json'
 require 'meep_tools/command_runner'
 
 describe 'link_from_src' do
-  let(:params) do
+  include_context('task isolation')
+
+  let(:task_params) do
     { 
-      "_testing": true,
       "source_dir": "/tmp/a",
       "target_dir": "/tmp/b"
     }
-  end
-  let(:input) { StringIO.new(params.to_json) }
-
-  around(:each) do |example|
-    begin
-      stdin = $stdin
-      $stdin = input
-      example.run
-    ensure
-      $stdin = stdin
-    end    
   end
 
   it do

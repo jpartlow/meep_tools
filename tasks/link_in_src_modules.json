@@ -5,6 +5,11 @@
     "modules": {
       "description": "List of PE modules to link in.",
       "type": "Array[String]"
+    },
+    "link": {
+      "description": "Whether to link module in basemodulepath, enterprise modulepath, or both (default)",
+      "type": "Enum[base,enterprise,both]",
+      "default": "both"
     }
   },
   "files": [

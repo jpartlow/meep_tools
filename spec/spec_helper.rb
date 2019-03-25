@@ -19,6 +19,8 @@ require 'spec_helper_local' if File.file?(File.join(File.dirname(__FILE__), 'spe
 $LOAD_PATH << File.expand_path(File.join(File.dirname(__FILE__),'..','lib'))
 $LOAD_PATH << File.expand_path(File.join(File.dirname(__FILE__),'..','scripts'))
 
+require 'shared/contexts'
+
 module SpecHelpers
   def self.fixtures_path
     File.expand_path(File.join(File.dirname(__FILE__),'fixtures'))
