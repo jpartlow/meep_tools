@@ -99,7 +99,7 @@ class TestPostgresql < Thor
   desc 'mount', 'Mount local $HOME/work/src into each of the vmpooler test hosts'
   def mount_nfs_hosts
     action('Create NFS mounts on hosts') do
-      run("bolt plan run meep_tools::nfs_mount -n #{hosts.values.join(',')}", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
+      run("#{bolt} plan run meep_tools::nfs_mount -n #{hosts.values.join(',')}")
     end
   end
 
@@ -107,7 +107,7 @@ class TestPostgresql < Thor
   method_option :pe_family, :type => :string, :required => true
   def prep
     action('Prep pe on the hosts') do
-      run("bolt plan run meep_tools::prep_pe pe_family=#{options[:pe_family]} -n #{hosts.values.join(',')}", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
+      run("#{bolt} plan run meep_tools::prep_pe pe_family=#{options[:pe_family]} -n #{hosts.values.join(',')}")
     end
   end
 
@@ -162,7 +162,7 @@ class TestPostgresql < Thor
       nodes = []
 
       action('Get package file lists') do
-        output = capture("bolt task run meep_tools::get_package_file_lists packages='#{JSON.dump(package_names)}' -n #{hosts.values.join(',')} --format=json", :chdir => TEST_PE_POSTGRESQL_ROOT_DIR)
+        output = capture("#{bolt} task run meep_tools::get_package_file_lists packages='#{JSON.dump(package_names)}' -n #{hosts.values.join(',')} --format=json")
         output = JSON.parse(output)
         nodes = output["items"]
       end
@@ -247,6 +247,17 @@ class TestPostgresql < Thor
   end
 
   no_commands do
+    # If the bolt gem is installed (via Bundler, for example), rbenv will have
+    # added an ~/.rbenv/shims/bolt that will pick up the gem's version. And
+    # since the shim also updates the path to prefix the current rbenv version shims,
+    # the fact that my overrides in ~/bin are in the path gets pushed too far down to
+    # be of use.
+    #
+    # So falling back to the absolute path of the package binary.
+    def bolt
+      "/opt/puppetlabs/bin/bolt"
+    end
+
     def debugging?
       # Thor class_option :debug
       options[:debug]
