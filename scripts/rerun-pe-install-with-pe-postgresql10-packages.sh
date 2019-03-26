@@ -32,7 +32,7 @@ done
 if [ "${postgres_major_version}" != "9.6" ] &&
    [ "${postgres_major_version}" != "10" ] &&
    [ "${postgres_major_version}" != "11" ]; then
-  echo "Usage: re-run-pe-install-wtih-pe-postgresql-packages.sh -v postgres_version> [-m modules,to,link]"
+  echo "Usage: re-run-pe-install-with-pe-postgresql-packages.sh -v postgres_version> [-m modules,to,link]"
   echo "  -v where <postgres_version> should be the major version without punctuation"
   echo "    (so 9.6, 10 or 11...)"
   echo "  -m <modules,list> an optional comma separated list of pe-modules to link"
@@ -59,7 +59,11 @@ pe_package_dir="${pe_dir}/packages/${platform}"
 cd /root || exit 1
 
 # get gpg keys
-cp -r "$nfs_mnt"/frankenbuilder/gpg /root
+if [ -e "$nfs_mnt"/frankenbuilder/gpg ]; then
+  cp -r "$nfs_mnt"/frankenbuilder/gpg /root
+else
+  cp -r "$nfs_mnt"/alternates/frankenbuilder_1/gpg /root
+fi
 set +e
 gpg --import gpg/GPG-KEY-frankenbuilder
 # gpg --import returns 2 when key is already present
