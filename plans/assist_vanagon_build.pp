@@ -6,12 +6,6 @@
 # but in cases where you are in the midst of updating the puppet-enterprise-vanagon
 # codebase defining how pe-postgresql* packages are built, they don't exist yet
 # in artifactory, and you need to inject them onto the vanagon host.
-#
-# So far, the only way I've found to do that is to through a pry into the middle of
-# https://github.com/puppetlabs/vanagon/blob/0.15.19/lib/vanagon/driver.rb#L108
-# to halt execution before vanagon tries to ensure the dependencies are installed,
-# and then run this plan against the vanagon host to get the locally built
-# packages installed.
 plan meep_tools::assist_vanagon_build(
   TargetSpec $nodes,
   Enum['96','10','11'] $postgres_version,
