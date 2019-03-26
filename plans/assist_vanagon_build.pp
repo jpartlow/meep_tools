@@ -61,15 +61,23 @@ plan meep_tools::assist_vanagon_build(
     }
 
     $find_result = run_command("find ${package_dir} -name 'pe-postgresql${postgres_version}-server*.${ext}' | grep -oE '[0-9]{4}\\.[0-9]+[.0-9]+-[0-9]'", 'localhost').first()
-    $package_version = $find_result.value()['stdout'][0,-2]
+    $package_version = $find_result.value()['stdout'][0,-2] # strip cr
     debug("package_version: ${package_version}")
 
+    $common_result = run_command("find ${package_dir} -name 'pe-postgresql-common*.${ext}' | grep -oE '[0-9]{4}\\.[0-9]-[0-9]+'", 'localhost').first()
+    $common_version = $common_result.value()['stdout'][0,-2] # strip cr
+    debug("common_version: ${common_version}")
+
+    # Ex: pe-postgresql-common-2019.1-1.pe.el7.x86_64.rpm
+    $postgresql_common  = "pe-postgresql-common${sep}${common_version}${platform}.${ext}"
+    # Ex: pe-postgresql96-2019.1.9.6.10-2.pe.el7.x86_64.rpm
     $postgresql         = "pe-postgresql${postgres_version}${sep}${package_version}${platform}.${ext}"
     $postgresql_server  = "pe-postgresql${postgres_version}-server${sep}${package_version}${platform}.${ext}"
     $postgresql_contrib = "pe-postgresql${postgres_version}-contrib${sep}${package_version}${platform}.${ext}"
     $postgresql_devel   = "pe-postgresql${postgres_version}-devel${sep}${package_version}${platform}.${ext}"
 
     [
+      $postgresql_common,
       $postgresql,
       $postgresql_server,
       $postgresql_contrib,
@@ -98,25 +106,30 @@ plan meep_tools::assist_vanagon_build(
         }
       }
 
-      package { "pe-postgresql${postgres_version}":
+      package { "pe-postgresql-common":
         ensure   => present,
         provider => $provider,
-        source   => $postgresql,
+        source   => "/root/$postgresql_common",
+      }
+      -> package { "pe-postgresql${postgres_version}":
+        ensure   => present,
+        provider => $provider,
+        source   => "/root/$postgresql",
       }
       -> package { "pe-postgresql${postgres_version}-server":
-        ensure   =>  present,
-        provider =>  $provider,
-        source   => $postgresql_server,
+        ensure   => present,
+        provider => $provider,
+        source   => "/root/$postgresql_server",
       }
       -> package { "pe-postgresql${postgres_version}-contrib":
-        ensure   =>  present,
-        provider =>  $provider,
-        source   => $postgresql_contrib,
+        ensure   => present,
+        provider => $provider,
+        source   => "/root/$postgresql_contrib",
       }
       -> package { "pe-postgresql${postgres_version}-devel":
-        ensure   =>  present,
-        provider =>  $provider,
-        source   => $postgresql_devel,
+        ensure   => present,
+        provider => $provider,
+        source   => "/root/$postgresql_devel",
       }
     }
   }
