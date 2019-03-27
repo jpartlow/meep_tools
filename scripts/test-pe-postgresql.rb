@@ -9,6 +9,7 @@ require 'diff_matcher'
 
 class TestPostgresql < Thor
   class_option :vanagon_path
+  class_option :debug, :type => :boolean, :default => false
   
   # Hosts cache keeps track of generated vmpooler hosts.
   HOSTS_CACHE = "~/.test-pe-postgresql.json"
@@ -29,6 +30,12 @@ class TestPostgresql < Thor
     "pe-postgresql%s-contrib",
     "pe-postgresql%s-devel",
   ].freeze
+
+  # Valid postgresql extension package patterns to build (need to be expanded with version)
+  EXTENSIONS = [
+    "pe-postgresql%s-pglogical",
+    "pe-postgresql%s-pgrepack",
+  ]
 
   # Valid pe-postgresql package versions
   VERSIONS = [
@@ -71,13 +78,11 @@ class TestPostgresql < Thor
   end
 
   def self.invoke(args, stdout_io = $stdout)
-    @io = $stdout
+    @io = stdout_io
     TestPostgresql.start(args)
   end
 
   include RunShellExecutable
-
-  class_option :debug, :type => :boolean, :default => false
 
   desc 'create', 'Generate one or more vmpooler test hosts, if they do not already exist'
   method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
@@ -117,20 +122,8 @@ class TestPostgresql < Thor
   method_option :version, :type => :string, :enum => VERSIONS, :required => true
   def build
     action('Build pe-postgresql packages for a set of platforms (in parallel)') do
-      vanagon_path = options[:vanagon_path] ? "#{options[:vanagon_path]}" : Dir.pwd
-      if !vanagon_path.include?('puppet-enterprise-vanagon')
-        out(red("Please specify the puppet-enterprise-vanagon path with the --vanagon-path flag, or run this command from inside the puppet-enterprise-vanagon directory"))
-        return
-      end
       package_names = construct_versioned_package_names
-      threads = options[:platforms].product(package_names).map do |i|
-        platform, package = i
-        package_build_thread(platform, package, vanagon_path)
-      end
-      threads.each do |t|
-        t.join
-        out("Finished: Build #{t[:package]} for #{t[:platform]}")
-      end
+      _build_packages(options[:platforms], package_names)
     end
   end
 
@@ -138,18 +131,18 @@ class TestPostgresql < Thor
   method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
   def build_common
     action('Build pe-postgresql-common package for a set of platforms (in parallel)') do
-      vanagon_path = options[:vanagon_path] ? "#{options[:vanagon_path]}" : Dir.pwd
-      if !vanagon_path.include?('puppet-enterprise-vanagon')
-        out(red("Please specify the puppet-enterprise-vanagon path with the --vanagon-path flag, or run this command from inside the puppet-enterprise-vanagon directory"))
-        return
-      end
-      threads = options[:platforms].map do |platform|
-        package_build_thread(platform, 'pe-postgresql-common', vanagon_path)
-      end
-      threads.each do |t|
-        t.join
-        out("Finished: Build #{t[:package]} for #{t[:platform]}")
-      end
+      _build_packages(options[:platforms], ['pe-postgresql-common'])
+    end
+  end
+
+  desc 'build_extensions', 'Build the pe-postgresql*-{pglogical,pgrepack} extension package(s) for platforms, concurrently'
+  method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
+  method_option :packages, :type => :array, :enum => EXTENSIONS, :default => EXTENSIONS
+  method_option :version, :type => :string, :enum => VERSIONS, :required => true
+  def build_extensions
+    action('Build pe-postgresql*-pglogical,pgrepack extension packages for a set of platforms (in parallel)') do
+      package_names = construct_versioned_package_names
+      _build_packages(options[:platforms], package_names)
     end
   end
 
@@ -323,10 +316,27 @@ class TestPostgresql < Thor
         Thread.current[:platform] = platform
         Thread.current[:package] = package
         Thread.current[:level] = Thread.main[:level] || 0
-        action("Starting: Build #{package} for #{platform}...") do
+        Thread.current[:success] = action("Starting: Build #{package} for #{platform}...") do
           run("bundle exec build #{package} #{platform}", :chdir => vanagon_path)
         end
       end
+    end
+
+    def _build_packages(platforms, package_names)
+      vanagon_path = options[:vanagon_path] ? "#{options[:vanagon_path]}" : Dir.pwd
+      if !vanagon_path.include?('puppet-enterprise-vanagon')
+        out(red("Please specify the puppet-enterprise-vanagon path with the --vanagon-path flag, or run this command from inside the puppet-enterprise-vanagon directory"))
+        return
+      end
+      threads = platforms.product(package_names).map do |i|
+        platform, package = i
+        package_build_thread(platform, package, vanagon_path)
+      end
+      threads.each do |t|
+        t.join
+        out("Finished: Build #{t[:package]} for #{t[:platform]}")
+      end
+      threads.all? { |t| t[:success] }
     end
   end
 end
