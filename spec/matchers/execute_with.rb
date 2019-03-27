@@ -11,7 +11,7 @@ RSpec::Matchers.define(:execute) do
       @runner.class.io = @stdout_tmp
     else
       begin
-        @runner = klass_or_instance.invoke(@args.split, @stdout_tmp)
+        @result = klass_or_instance.invoke(@args.split, @stdout_tmp)
       rescue ParseOptions::HelpExit
         @result = true # would exit with a 0
       end
