@@ -1,8 +1,8 @@
 plan meep_tools::build_pg_extension(
   TargetSpec $nodes,
   Enum['pglogical','pgrepack'] $extension,
-  Pattern[/^\d{4}\.\d+$/] $pe_family,
-  Variant[Enum['latest'],Pattern[/^\d{4}\.\d+\.\d+.*/]] $pe_version = 'latest',
+  Meep_tools::Pe_family $pe_family,
+  Meep_tools::Pe_version $pe_version = 'latest',
   Enum['96','10','11'] $postgres_version,
   Pattern[/^\/.*/] $puppet_enterprise_vanagon_dir,
 ) {
