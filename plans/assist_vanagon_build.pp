@@ -17,42 +17,12 @@ plan meep_tools::assist_vanagon_build(
   run_plan(facts, nodes =>  $nodes)
 
   get_targets($nodes).each |$node| {
-    $osfacts   = $node.facts['os']
-    $_osfamily = $osfacts['family']
-    $_osmajor  = $osfacts['release']['major']
-    $_osfull   = $osfacts['release']['full']
-
-    case $_osfamily {
-      'RedHat': {
-        $package_dir = "${output_dir}/el/${_osmajor}/products/x86_64"
-        $ext = "rpm"
-        $sep = '-'
-        $platform = ".pe.el${_osmajor}.x86_64"
-        $provider = "rpm"
-      }
-      'Debian': {
-        $codename = case $_osfull {
-          '18.04': { 'bionic' }
-          '16.04': { 'xenial' }
-          default: { fail("Unknown Ubuntu os release codename for '${_osfull}' for ${node}") }
-        }
-        $package_dir = "${output_dir}/deb/${codename}"
-        $ext = "deb"
-        $sep = '_'
-        $platform = "${codename}_amd64"
-        $provider = "dpkg"
-      }
-      'SLES','Suse': {
-        $package_dir = "${output_dir}/sles/${_osmajor}/products/x86_64"
-        $ext = "rpm"
-        $sep = '-'
-        $platform = ".pe.sles${_osmajor}.x86_64"
-        $provider = "rpm"
-      }
-      default: {
-        fail("Unknown os family '${_osfamily}' for ${node}")
-      }
-    }
+    $vanagon_vars = meep_tools::get_vanagon_output_vars($node.facts['os'])
+    $ext = $vanagon_vars['ext']
+    $sep = $vanagon_vars['sep']
+    $platform = $vanagon_vars['platform']
+    $provider = $vanagon_vars['provider']
+    $package_dir = "${output_dir}/${vanagon_vars['package_dir']}"
 
     $find_result = run_command("find ${package_dir} -name 'pe-postgresql${postgres_version}-server*.${ext}' | grep -oE '[0-9]{4}\\.[0-9]+[.0-9]+-[0-9]'", 'localhost').first()
     $package_version = $find_result.value()['stdout'][0,-2] # strip cr
