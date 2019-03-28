@@ -11,7 +11,11 @@ RSpec::Matchers.define(:execute) do
       @runner.class.io = @stdout_tmp
     else
       begin
-        @result = klass_or_instance.invoke(@args.split, @stdout_tmp)
+        if defined?(Thor) == 'constant' && klass_or_instance < Thor
+          @result = klass_or_instance.invoke(@args.split, @stdout_tmp)
+        else
+          @runner = klass_or_instance.invoke(@args.split, @stdout_tmp)
+        end
       rescue ParseOptions::HelpExit
         @result = true # would exit with a 0
       end
