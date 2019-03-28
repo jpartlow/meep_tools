@@ -11,7 +11,7 @@ plan meep_tools::assist_vanagon_build(
   Enum['96','10','11'] $postgres_version,
   # Absolute path to the local Vanagon directory containing pre-built
   # pe-postgreql packages.
-  Pattern[/^\/.*/] $output_dir,
+  Meep_tools::Absolute_path $output_dir,
 ) {
   apply_prep($nodes)
   run_plan(facts, nodes =>  $nodes)
