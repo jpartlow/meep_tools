@@ -108,6 +108,19 @@ class TestPostgresql < Thor
     end
   end
 
+  desc 'getpe', 'Just download and unpack a PE tarball into /root. Either pe_family (for latest of that line) or pe_version must be specified.'
+  method_option :pe_family, :type => :string
+  method_option :pe_version, :type => :string
+  def getpe
+    action('Get a PE tarball onto the hosts and unpack it') do
+      args = []
+      args << "pe_family=#{options[:pe_family]}" if !options[:pe_family].nil?
+      args << "pe_version=#{options[:pe_version]}" if !options[:pe_version].nil?
+      raise(RuntimeError, "Must set either pe_family or pe_version.") if args.empty?
+      run("#{bolt} plan run meep_tools::get_pe #{args.join(' ')} -n #{hosts.values.join(',')}")
+    end
+  end
+
   desc 'prep', 'Prep a PE install on the hosts with the -p option (download tarball, setup package repository, do not install)'
   method_option :pe_family, :type => :string, :required => true
   def prep

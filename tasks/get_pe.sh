@@ -39,5 +39,6 @@ echo "{
   \"pe_dir\":\"${pe_dir}\",
   \"pe_tarball\":\"${pe_tarball}\",
   \"pe_tarball_url\":\"${pe_tarball_url}\",
-  \"pe_family\":\"${pe_family}\"
+  \"pe_family\":\"${pe_family}\",
+  \"pe_version\":\"${pe_version}\"
 }"
