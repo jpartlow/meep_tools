@@ -24,12 +24,10 @@ plan meep_tools::assist_vanagon_build(
     $provider = $vanagon_vars['provider']
     $package_dir = "${output_dir}/${vanagon_vars['package_dir']}"
 
-    $find_result = run_command("find ${package_dir} -name 'pe-postgresql${postgres_version}-server*.${ext}' | grep -oE '[0-9]{4}\\.[0-9]+[.0-9]+-[0-9]'", 'localhost').first()
-    $package_version = $find_result.value()['stdout'][0,-2] # strip cr
+    $package_version = meep_tools::lookup_package_version($package_dir, "pe-postgresql${postgres_version}-server*.${ext}")
     debug("package_version: ${package_version}")
 
-    $common_result = run_command("find ${package_dir} -name 'pe-postgresql-common*.${ext}' | grep -oE '[0-9]{4}\\.[0-9]-[0-9]+'", 'localhost').first()
-    $common_version = $common_result.value()['stdout'][0,-2] # strip cr
+    $common_version = meep_tools::lookup_package_version($package_dir, "pe-postgresql-common*.${ext}")
     debug("common_version: ${common_version}")
 
     # Ex: pe-postgresql-common-2019.1-1.pe.el7.x86_64.rpm
