@@ -3,6 +3,6 @@
   "implementations": [
     { "name": "sign_and_update_el_repo.sh", "requirements": ["RedHat"] },
     { "name": "sign_and_update_deb_repo.sh", "requirements": ["Debian"] },
-    { "name": "sign_and_update_sles_repo.sh", "requirements": ["Suse"] }
+    { "name": "sign_and_update_sles_repo.sh", "requirements": ["SLES"] }
   ]
 }

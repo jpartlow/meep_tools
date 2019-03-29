@@ -94,7 +94,12 @@ plan meep_tools::inject_packages(
 
     # Set the os family as a feature on the node so that the correct
     # implementation of sign_and_update_repo is found.
-    set_feature($node, $osfacts['family'])
+    set_feature($node,
+      $osfacts['family'] ? {
+        'Suse'  => 'SLES',
+        default =>  $osfacts['family']
+      }
+    )
     run_task(meep_tools::sign_and_update_repo, $node, $signing_params)
   }
 }
