@@ -13,7 +13,6 @@ plan meep_tools::inject_packages(
   # pe-postgreql packages.
   Meep_tools::Absolute_path $output_dir,
 ) {
-  apply_prep($nodes)
   run_plan(facts, nodes => $nodes)
 
   get_targets($nodes).each |$node| {
@@ -85,7 +84,7 @@ plan meep_tools::inject_packages(
       'Debian': {
         {
           'repo_dir' => $pe_package_dir,
-          'codename' => $osfacts['distro']['codename'],
+          'codename' => meep_tools::ubuntu_codename($osfacts['release']['full']),
         }
       }
       default: {

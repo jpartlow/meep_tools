@@ -27,13 +27,7 @@ function meep_tools::get_vanagon_output_vars(Hash $osfacts) {
     }
 
     'Debian': {
-      $codename = case $_osfull {
-        '18.04': { 'bionic' }
-        '16.04': { 'xenial' }
-        default: {
-          fail("Unknown Ubuntu os release codename for '${_osfull}'")
-        }
-      }
+      $codename = meep_tools::ubuntu_codename($_osfull)
       # The throwaway $_result is sidestepping a parser error
       $_result = {
         'package_dir' => "deb/${codename}",
