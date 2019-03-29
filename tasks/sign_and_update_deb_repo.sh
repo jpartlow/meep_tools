@@ -10,6 +10,7 @@ pe_package_dir=$PT_repo_dir
 # shellcheck disable=SC2154
 codename=$PT_os_codename
 
+apt update
 apt install -y dpkg-dev
 
 # shellcheck disable=SC2002
