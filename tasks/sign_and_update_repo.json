@@ -1,0 +1,8 @@
+{
+  "description": "Update packaging metadata in the given repository directory, signing packages first (if el), or signing metadata afterwards (sles, deb). The modules gpg key (borrowed from Frankenbuilder) is used for signing",
+  "implementations": [
+    { "name": "sign_and_update_el_repo.sh", "requirements": ["RedHat"] },
+    { "name": "sign_and_update_deb_repo.sh", "requirements": ["Debian"] },
+    { "name": "sign_and_update_sles_repo.sh", "requirements": ["Suse"] }
+  ]
+}
