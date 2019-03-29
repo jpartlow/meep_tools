@@ -159,6 +159,16 @@ class TestPostgresql < Thor
     end
   end
 
+  desc 'inject', 'Inject locally built pe-postgresql packages into the latest PE tarball of a given family that is present on the test nodes.'
+  method_option :pe_family, :type => :string, :required => true
+  method_option :postgres_version, :type => :string, :enum => VERSIONS, :required => true
+  def inject
+    action("Inject locally built pe-postgresql packages into latest PE #{options[:pe_family]} tarball on all test hosts.") do
+      vanagon_output_dir = "#{get_vanagon_path}/output"
+      run("#{bolt} plan run meep_tools::inject_packages pe_family=#{options[:pe_family]} postgres_version=#{options[:postgres_version]} output_dir=#{vanagon_output_dir} -n #{hosts.values.join(',')}")
+    end
+  end
+
   desc 'compare_packages', 'Compare contents of pe-postgresql* packages for all platforms'
   method_option :packages, :type => :array, :enum => PACKAGES, :default => PACKAGES
   method_option :version, :type => :string, :enum => VERSIONS, :required => true
@@ -324,7 +334,7 @@ class TestPostgresql < Thor
       options[:packages].map { |p| p % options[:version] }
     end
 
-    def package_build_thread(platform, package, vanagon_path)
+    def _package_build_thread(platform, package, vanagon_path)
       Thread.new do
         Thread.current[:platform] = platform
         Thread.current[:package] = package
@@ -335,15 +345,20 @@ class TestPostgresql < Thor
       end
     end
 
-    def _build_packages(platforms, package_names)
+    def get_vanagon_path
       vanagon_path = options[:vanagon_path] ? "#{options[:vanagon_path]}" : Dir.pwd
       if !vanagon_path.include?('puppet-enterprise-vanagon')
         out(red("Please specify the puppet-enterprise-vanagon path with the --vanagon-path flag, or run this command from inside the puppet-enterprise-vanagon directory"))
-        return
+        raise(ArgumentError, "#{vanagon_path} does not seem to point to a puppet-enterprise-vanagon checkout")
       end
+      return vanagon_path
+    end
+
+    def _build_packages(platforms, package_names)
+      vanagon_path = get_vanagon_path
       threads = platforms.product(package_names).map do |i|
         platform, package = i
-        package_build_thread(platform, package, vanagon_path)
+        _package_build_thread(platform, package, vanagon_path)
       end
       threads.each do |t|
         t.join
