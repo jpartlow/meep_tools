@@ -1,0 +1,14 @@
+{
+  "description": "Update and sign metadata for the given debian repository",
+  "input_method": "environment",
+  "parameters": {
+    "repo_dir": {
+      "description": "Absolute path to the directory that holds the debian repository that we are updating.",
+      "type": "Meep_tools::Absolute_path"
+    },
+    "os_codename": {
+      "description": "The ubuntu codename for the os.",
+      "type": "String"
+    }
+  }
+}

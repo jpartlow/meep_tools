@@ -1,0 +1,10 @@
+{
+  "description": "Update and sign metadata for the given sles repository",
+  "input_method": "environment",
+  "parameters": {
+    "repo_dir": {
+      "description": "Absolute path to the directory that holds the zypper repository that we are updating.",
+      "type": "Meep_tools::Absolute_path"
+    }
+  }
+}

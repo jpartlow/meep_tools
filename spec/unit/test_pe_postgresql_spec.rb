@@ -71,7 +71,6 @@ describe 'TestPostgresql' do
   end
 
   context 'creating hosts' do
-    let(:subject) { TestPostgresql }
     let(:tmp_hosts_cache_path) { "#{tmpdir}/test.json" }
 
     let(:platforms) do
@@ -115,13 +114,70 @@ describe 'TestPostgresql' do
   end
 
   context 'execute_with' do
-    let(:subject) { TestPostgresql }
   end
 
   context 'initializing hosts' do
   end
 
   context 'building packages' do
+    around(:each) do |example|
+      begin
+        FileUtils.mkdir('/tmp/puppet-enterprise-vanagon')
+        example.run
+      ensure
+        FileUtils.rmdir('/tmp/puppet-enterprise-vanagon')
+      end
+    end
+
+    it 'builds all the base pe-postgresql<version>* packages' do
+      expect(TestPostgresql).to(
+        execute
+          .and_invoke_with('build --version=96 --vanagon-path=/tmp/puppet-enterprise-vanagon')
+          .and_generate_commands([
+            /build pe-postgresql96 el-7-x86_64/,
+            /build pe-postgresql96 el-6-x86_64/,
+            /build pe-postgresql96 ubuntu-16.04-amd64/,
+            /build pe-postgresql96 ubuntu-18.04-amd64/,
+            /build pe-postgresql96 sles-12-x86_64/,
+            /build pe-postgresql96-server sles-12-x86_64/,
+            # ...
+            /build pe-postgresql96-contrib sles-12-x86_64/,
+            # ...
+            /build pe-postgresql96-devel sles-12-x86_64/,
+            # ...
+          ])
+      )
+    end
+
+    it 'builds the pe-postgresql-common package' do
+      expect(TestPostgresql).to(
+        execute
+          .and_invoke_with('build_common --vanagon-path=/tmp/puppet-enterprise-vanagon')
+          .and_generate_commands([
+            /build pe-postgresql-common el-7-x86_64/,
+            /build pe-postgresql-common el-6-x86_64/,
+            /build pe-postgresql-common ubuntu-16.04-amd64/,
+            /build pe-postgresql-common ubuntu-18.04-amd64/,
+            /build pe-postgresql-common sles-12-x86_64/,
+          ])
+      )
+    end
+
+    it 'builds the pe-postgresql<version>-<extension> packages' do
+      expect(TestPostgresql).to(
+        execute
+          .and_invoke_with('build_extensions --version=96 --vanagon-path=/tmp/puppet-enterprise-vanagon')
+          .and_generate_commands([
+            /build pe-postgresql96-pglogical el-7-x86_64/,
+            /build pe-postgresql96-pglogical el-6-x86_64/,
+            /build pe-postgresql96-pglogical ubuntu-16.04-amd64/,
+            /build pe-postgresql96-pglogical ubuntu-18.04-amd64/,
+            /build pe-postgresql96-pglogical sles-12-x86_64/,
+            /build pe-postgresql96-pgrepack sles-12-x86_64/,
+            # ...
+          ])
+      )
+    end
   end
 
   context 'running tests on hosts' do

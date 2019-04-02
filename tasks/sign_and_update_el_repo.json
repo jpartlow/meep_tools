@@ -1,0 +1,18 @@
+{
+  "description": "Sign a given set of packages and update metadata for the given el repository",
+  "input_method": "environment",
+  "parameters": {
+    "repo_dir": {
+      "description": "Absolute path to the directory that holds the yum repository that we are updating.",
+      "type": "Meep_tools::Absolute_path"
+    },
+    "packages": {
+      "description": "List of test packages to be signed. (These are the dev packages that we are injecting into the tarball). This should be an array of filenames that can be found in the repo_dir.",
+      "type": "Array[String]"
+    },
+    "os_major_version": {
+      "description": "The Redhat os major version (6, 7, 8...)",
+      "type": "Integer"
+    }
+  }
+}

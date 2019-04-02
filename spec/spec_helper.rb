@@ -9,7 +9,6 @@ RSpec.configure do |c|
   c.mock_with :rspec do |mocks|
     mocks.syntax = :expect
   end
-  c.mock_with :rspec
 end
 require 'puppetlabs_spec_helper/module_spec_helper'
 require 'bolt_spec/plans'
@@ -20,6 +19,7 @@ $LOAD_PATH << File.expand_path(File.join(File.dirname(__FILE__),'..','lib'))
 $LOAD_PATH << File.expand_path(File.join(File.dirname(__FILE__),'..','scripts'))
 
 require 'shared/contexts'
+require 'shared/matchers'
 
 module SpecHelpers
   def self.fixtures_path

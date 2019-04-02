@@ -6,70 +6,40 @@
 # but in cases where you are in the midst of updating the puppet-enterprise-vanagon
 # codebase defining how pe-postgresql* packages are built, they don't exist yet
 # in artifactory, and you need to inject them onto the vanagon host.
-#
-# So far, the only way I've found to do that is to through a pry into the middle of
-# https://github.com/puppetlabs/vanagon/blob/0.15.19/lib/vanagon/driver.rb#L108
-# to halt execution before vanagon tries to ensure the dependencies are installed,
-# and then run this plan against the vanagon host to get the locally built
-# packages installed.
 plan meep_tools::assist_vanagon_build(
   TargetSpec $nodes,
   Enum['96','10','11'] $postgres_version,
   # Absolute path to the local Vanagon directory containing pre-built
   # pe-postgreql packages.
-  Pattern[/^\/.*/] $output_dir,
+  Meep_tools::Absolute_path $output_dir,
 ) {
   apply_prep($nodes)
   run_plan(facts, nodes =>  $nodes)
 
   get_targets($nodes).each |$node| {
-    $osfacts   = $node.facts['os']
-    $_osfamily = $osfacts['family']
-    $_osmajor  = $osfacts['release']['major']
-    $_osfull   = $osfacts['release']['full']
+    $vanagon_vars = meep_tools::get_vanagon_output_vars($node.facts['os'])
+    $ext = $vanagon_vars['ext']
+    $sep = $vanagon_vars['sep']
+    $platform = $vanagon_vars['platform']
+    $provider = $vanagon_vars['provider']
+    $package_dir = "${output_dir}/${vanagon_vars['package_dir']}"
 
-    case $_osfamily {
-      'RedHat': {
-        $package_dir = "${output_dir}/el/${_osmajor}/products/x86_64"
-        $ext = "rpm"
-        $sep = '-'
-        $platform = ".pe.el${_osmajor}.x86_64"
-        $provider = "rpm"
-      }
-      'Debian': {
-        $codename = case $_osfull {
-          '18.04': { 'bionic' }
-          '16.04': { 'xenial' }
-          default: { fail("Unknown Ubuntu os release codename for '${_osfull}' for ${node}") }
-        }
-        $package_dir = "${output_dir}/deb/${codename}"
-        $ext = "deb"
-        $sep = '_'
-        $platform = "${codename}_amd64"
-        $provider = "dpkg"
-      }
-      'SLES','Suse': {
-        $package_dir = "${output_dir}/sles/${_osmajor}/products/x86_64"
-        $ext = "rpm"
-        $sep = '-'
-        $platform = ".pe.sles${_osmajor}.x86_64"
-        $provider = "rpm"
-      }
-      default: {
-        fail("Unknown os family '${_osfamily}' for ${node}")
-      }
-    }
-
-    $find_result = run_command("find ${package_dir} -name 'pe-postgresql${postgres_version}-server*.${ext}' | grep -oE '[0-9]{4}\\.[0-9]+[.0-9]+-[0-9]'", 'localhost').first()
-    $package_version = $find_result.value()['stdout'][0,-2]
+    $package_version = meep_tools::lookup_package_version($package_dir, "pe-postgresql${postgres_version}-server*.${ext}")
     debug("package_version: ${package_version}")
 
+    $common_version = meep_tools::lookup_package_version($package_dir, "pe-postgresql-common*.${ext}")
+    debug("common_version: ${common_version}")
+
+    # Ex: pe-postgresql-common-2019.1-1.pe.el7.x86_64.rpm
+    $postgresql_common  = "pe-postgresql-common${sep}${common_version}${platform}.${ext}"
+    # Ex: pe-postgresql96-2019.1.9.6.10-2.pe.el7.x86_64.rpm
     $postgresql         = "pe-postgresql${postgres_version}${sep}${package_version}${platform}.${ext}"
     $postgresql_server  = "pe-postgresql${postgres_version}-server${sep}${package_version}${platform}.${ext}"
     $postgresql_contrib = "pe-postgresql${postgres_version}-contrib${sep}${package_version}${platform}.${ext}"
     $postgresql_devel   = "pe-postgresql${postgres_version}-devel${sep}${package_version}${platform}.${ext}"
 
     [
+      $postgresql_common,
       $postgresql,
       $postgresql_server,
       $postgresql_contrib,
@@ -98,25 +68,30 @@ plan meep_tools::assist_vanagon_build(
         }
       }
 
-      package { "pe-postgresql${postgres_version}":
+      package { "pe-postgresql-common":
         ensure   => present,
         provider => $provider,
-        source   => $postgresql,
+        source   => "/root/$postgresql_common",
+      }
+      -> package { "pe-postgresql${postgres_version}":
+        ensure   => present,
+        provider => $provider,
+        source   => "/root/$postgresql",
       }
       -> package { "pe-postgresql${postgres_version}-server":
-        ensure   =>  present,
-        provider =>  $provider,
-        source   => $postgresql_server,
+        ensure   => present,
+        provider => $provider,
+        source   => "/root/$postgresql_server",
       }
       -> package { "pe-postgresql${postgres_version}-contrib":
-        ensure   =>  present,
-        provider =>  $provider,
-        source   => $postgresql_contrib,
+        ensure   => present,
+        provider => $provider,
+        source   => "/root/$postgresql_contrib",
       }
       -> package { "pe-postgresql${postgres_version}-devel":
-        ensure   =>  present,
-        provider =>  $provider,
-        source   => $postgresql_devel,
+        ensure   => present,
+        provider => $provider,
+        source   => "/root/$postgresql_devel",
       }
     }
   }

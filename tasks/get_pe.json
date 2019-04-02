@@ -7,8 +7,12 @@
       "type": "String"
     },
     "version": {
-      "description": "The version of pe. Needed to construct the tarball url",
-      "type": "String"
+      "description": "The version of pe. Needed to construct the tarball url. Takes precednece over pe_family if given.",
+      "type": "Optional[Meep_tools::Pe_version]"
+    },
+    "family": {
+      "description": "The first two version numbers of a PE release (2019.1 for example). If no version is provided, this may be specified to pull the latest tarball from ci-ready instead.",
+      "type": "Optional[Meep_tools::Pe_family]"
     }
   }
 }
