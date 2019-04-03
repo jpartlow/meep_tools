@@ -10,7 +10,7 @@ require 'diff_matcher'
 class TestPostgresql < Thor
   class_option :vanagon_path
   class_option :debug, :type => :boolean, :default => false
-  
+
   # Hosts cache keeps track of generated vmpooler hosts.
   HOSTS_CACHE = "~/.test-pe-postgresql.json"
 
@@ -113,10 +113,8 @@ class TestPostgresql < Thor
   method_option :pe_version, :type => :string
   def getpe
     action('Get a PE tarball onto the hosts and unpack it') do
-      args = []
-      args << "pe_family=#{options[:pe_family]}" if !options[:pe_family].nil?
-      args << "pe_version=#{options[:pe_version]}" if !options[:pe_version].nil?
-      raise(RuntimeError, "Must set either pe_family or pe_version.") if args.empty?
+      args = pe_family_or_version(options)
+      raise(RuntimeError, "Must set either --pe-family or --pe-version.") if args.empty?
       run("#{bolt} plan run meep_tools::get_pe #{args.join(' ')} -n #{hosts.values.join(',')}")
     end
   end
@@ -131,6 +129,34 @@ class TestPostgresql < Thor
           run(%Q|#{bolt} plan run enterprise_tasks::testing::write_pe_conf primary=#{host} console_admin_password=password other_parameters='{"puppet_enterprise::postgres_version_override":"#{pg_version}"}' -n #{host}|)
         end
       end
+    end
+  end
+
+  desc 'install', 'Install PE from a tarball already present on the hosts'
+  method_option :work_dir, :type => :string, :default => '/root'
+  method_option :unpacked_tarball, :type => :string
+  method_option :pe_version, :type => :string
+  method_option :pe_family, :type => :string
+  method_option :debug_logging, :type => :boolean, :default => false
+  method_option :pe_conf_file, :type => :string, :default => '/root/pe.conf'
+  def install
+    args = tarball_args(options)
+    action("Install PE on hosts based on #{args.join(' ')}") do
+      run(%Q|#{bolt} task run enterprise_tasks::testing_installer work_dir=#{options[:work_dir]} #{args.join(' ')} pe_conf_file=#{options[:pe_conf_file]} debug_logging=#{options[:debug_logging]} -n #{hosts.values.join(',')}|)
+    end
+  end
+
+  desc 'upgrade', 'Upgrade PE from a tarball already presen on the hosts'
+  method_option :work_dir, :type => :string, :default => '/root'
+  method_option :unpacked_tarball, :type => :string
+  method_option :pe_version, :type => :string
+  method_option :pe_family, :type => :string
+  method_option :debug_logging, :type => :boolean, :default => false
+  method_option :non_interactive, :type => :boolean, :default => true
+  def upgrade
+    args = tarball_args(options)
+    action("Upgrade PE on hosts based on #{args.join(' ')}") do
+      run(%Q|#{bolt} task run enterprise_tasks::testing_installer work_dir=#{options[:work_dir]} #{args.join(' ')} non_interactive=#{options[:non_interactive]} debug_logging=#{options[:debug_logging]} -n #{hosts.values.join(',')}|)
     end
   end
 
@@ -308,6 +334,26 @@ class TestPostgresql < Thor
 
     def hosts=(hosts_cache)
       @hosts = hosts_cache
+    end
+
+    # @return [Array<String>] an array of the pe_family and/or pe_version args,
+    #   if given, suitable for passing to bolt.
+    def pe_family_or_version(opts)
+      args = []
+      args << "pe_family=#{opts[:pe_family]}" if !opts[:pe_family].nil?
+      args << "pe_version=#{opts[:pe_version]}" if !opts[:pe_version].nil?
+      args
+    end
+
+
+    # @return [Array<String>] an array of the unpacked_tarball, pe_family
+    #   and/or pe_version args, if given, suitable for passing to bolt.
+    # @raise RuntimeError if none of the args given.
+    def tarball_args(opts)
+      args = pe_family_or_version(opts)
+      args < "unpacked_tarball=#{opts[:unpacked_tarball]}" if !opts[:unpacked_tarball].nil?
+      raise(RuntimeError, "Must set either --unpacked-tarball, --pe-version or --pe-family in order to find a PE directory to install from on the given hosts.") if args.empty?
+      args
     end
 
     # Convert from platform strings vanagon will recognize to ones vmfloaty
