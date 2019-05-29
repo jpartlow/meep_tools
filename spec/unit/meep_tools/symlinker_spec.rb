@@ -56,22 +56,9 @@ describe 'meep_tools/symlinker' do
     end
   end
 
-  context '#remote_src_dir' do
-    around(:each) do |example|
-      begin
-        user = ENV['USER']
-        ENV['USER'] = 'test'
-        example.run
-      ensure
-        ENV['USER'] = user
-      end
-    end
-
-    it { expect(tester.remote_src_dir).to eq("/test-src") }
-  end
-
   RSpec.shared_context('test-src modules') do
     let(:remote_src_fixture_dir) { "#{SpecHelpers.fixtures_path}/test-src" }
+    let(:src_dir) { remote_src_fixture_dir }
 
     around(:each) do |example|
       begin
@@ -88,23 +75,23 @@ describe 'meep_tools/symlinker' do
 
     context 'when no modules' do
       let(:module_dirs) { [] }
-      it { expect(tester.available_modules(remote_src_fixture_dir)).to match_array([]) }
+      it { expect(tester.available_modules(src_dir)).to match_array([]) }
     end
 
     context 'when puppet-enterprise-modules' do
       let(:module_dirs) do
         [
-          'puppet-enterprise-modules/modules/puppet_enterprise',
-          'puppet-enterprise-modules/modules/pe_install',
-          'puppet-enterprise-modules/modules/pe_manager',
+          'pem/lovejoy/modules/puppet_enterprise',
+          'pem/lovejoy/modules/pe_install',
+          'pem/lovejoy/modules/pe_manager',
         ]
       end
 
       it do
-        expect(tester.available_modules(remote_src_fixture_dir)).to match({
-          'puppet_enterprise' => "#{remote_src_fixture_dir}/puppet-enterprise-modules/modules/puppet_enterprise",
-          'pe_install' => "#{remote_src_fixture_dir}/puppet-enterprise-modules/modules/pe_install",
-          'pe_manager' => "#{remote_src_fixture_dir}/puppet-enterprise-modules/modules/pe_manager",
+        expect(tester.available_modules('lovejoy', src_dir)).to match({
+          'puppet_enterprise' => "#{remote_src_fixture_dir}/pem/lovejoy/modules/puppet_enterprise",
+          'pe_install' => "#{remote_src_fixture_dir}/pem/lovejoy/modules/pe_install",
+          'pe_manager' => "#{remote_src_fixture_dir}/pem/lovejoy/modules/pe_manager",
         })
       end
     end
@@ -118,7 +105,7 @@ describe 'meep_tools/symlinker' do
       end
 
       it do
-        expect(tester.available_modules(remote_src_fixture_dir)).to match({
+        expect(tester.available_modules('lovejoy', src_dir)).to match({
           'pe_r10k' => "#{remote_src_fixture_dir}/pe-modules/puppetlabs-pe_r10k",
           'pe_support_script' => "#{remote_src_fixture_dir}/pe-modules/puppetlabs-pe_support_script",
         })
@@ -128,19 +115,19 @@ describe 'meep_tools/symlinker' do
     context 'when both' do
       let(:module_dirs) do
         [
-          'puppet-enterprise-modules/modules/puppet_enterprise',
-          'puppet-enterprise-modules/modules/pe_install',
-          'puppet-enterprise-modules/modules/pe_manager',
+          'pem/lovejoy/modules/puppet_enterprise',
+          'pem/lovejoy/modules/pe_install',
+          'pem/lovejoy/modules/pe_manager',
           'pe-modules/puppetlabs-pe_r10k',
           'pe-modules/puppetlabs-pe_support_script',
         ]
       end
 
       it do
-        expect(tester.available_modules(remote_src_fixture_dir)).to match({
-          'puppet_enterprise' => "#{remote_src_fixture_dir}/puppet-enterprise-modules/modules/puppet_enterprise",
-          'pe_install' => "#{remote_src_fixture_dir}/puppet-enterprise-modules/modules/pe_install",
-          'pe_manager' => "#{remote_src_fixture_dir}/puppet-enterprise-modules/modules/pe_manager",
+        expect(tester.available_modules('lovejoy', src_dir)).to match({
+          'puppet_enterprise' => "#{remote_src_fixture_dir}/pem/lovejoy/modules/puppet_enterprise",
+          'pe_install' => "#{remote_src_fixture_dir}/pem/lovejoy/modules/pe_install",
+          'pe_manager' => "#{remote_src_fixture_dir}/pem/lovejoy/modules/pe_manager",
           'pe_r10k' => "#{remote_src_fixture_dir}/pe-modules/puppetlabs-pe_r10k",
           'pe_support_script' => "#{remote_src_fixture_dir}/pe-modules/puppetlabs-pe_support_script",
         })
@@ -150,7 +137,7 @@ describe 'meep_tools/symlinker' do
 
   context '#link_module' do
     it do
-      expect { tester.link_module('puppet_enterprise') }.to raise_error(RuntimeError, /Module puppet_enterprise not present\. Available modules:\n\[\]/)
+      expect { tester.link_module('puppet_enterprise', 'lovejoy') }.to raise_error(RuntimeError, /Module puppet_enterprise not present\. Available modules:\n\[\]/)
     end
 
     context 'with modules' do
@@ -158,73 +145,73 @@ describe 'meep_tools/symlinker' do
 
       let(:module_dirs) do
         [
-          'puppet-enterprise-modules/modules/puppet_enterprise',
-          'puppet-enterprise-modules/modules/pe_install',
-          'puppet-enterprise-modules/modules/pe_manager',
+          'pem/lovejoy/modules/puppet_enterprise',
+          'pem/lovejoy/modules/pe_install',
+          'pem/lovejoy/modules/pe_manager',
         ]
       end
 
       it do
-        expect { tester.link_module('foo', modules_root: remote_src_fixture_dir) }.to raise_error(RuntimeError, /Module foo not present\. Available modules:\n\[(?:"(?:puppet_enterprise|pe_install|pe_manager)"(?:, )?){3}\]/)
+        expect { tester.link_module('foo', 'lovejoy', src_dir: remote_src_fixture_dir) }.to raise_error(RuntimeError, /Module foo not present\. Available modules:\n\[(?:"(?:puppet_enterprise|pe_install|pe_manager)"(?:, )?){3}\]/)
       end
 
       it 'links to both modulepaths by default' do
-        expect { tester.link_module('puppet_enterprise', modules_root: remote_src_fixture_dir) }.to output(<<-EOM).to_stdout
---> Replacing /opt/puppetlabs/puppet/modules/puppet_enterprise with a link to /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise
---> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise with a link to /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise
+        expect { tester.link_module('puppet_enterprise', 'lovejoy', src_dir: remote_src_fixture_dir) }.to output(<<-EOM).to_stdout
+--> Replacing /opt/puppetlabs/puppet/modules/puppet_enterprise with a link to #{remote_src_fixture_dir}/pem/lovejoy/modules/puppet_enterprise
+--> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise with a link to #{remote_src_fixture_dir}/pem/lovejoy/modules/puppet_enterprise
         EOM
         expect(runner.commands).to match([
           match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/puppet/modules'),
           match('mv -T /opt/puppetlabs/puppet/modules/puppet_enterprise /root/_meep_tools_backups/opt/puppetlabs/puppet/modules/puppet_enterprise'),
-          match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise /opt/puppetlabs/puppet/modules/puppet_enterprise'),
+          match("ln -s #{remote_src_fixture_dir}/pem/lovejoy/modules/puppet_enterprise /opt/puppetlabs/puppet/modules/puppet_enterprise"),
           match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules'),
           match('mv -T /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
-          match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
+          match("ln -s #{remote_src_fixture_dir}/pem/lovejoy/modules/puppet_enterprise /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise"),
         ])
       end
 
       it 'links only to basemodulepath' do
-        expect { tester.link_module('puppet_enterprise', link: 'base', modules_root: remote_src_fixture_dir) }.to output(%r{\A--> Replacing /opt/puppetlabs/puppet/modules/puppet_enterprise.*\Z}).to_stdout
+        expect { tester.link_module('puppet_enterprise', 'lovejoy', link: 'base', src_dir: remote_src_fixture_dir) }.to output(%r{\A--> Replacing /opt/puppetlabs/puppet/modules/puppet_enterprise.*\Z}).to_stdout
         expect(runner.commands).to match([
           match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/puppet/modules'),
           match('mv -T /opt/puppetlabs/puppet/modules/puppet_enterprise /root/_meep_tools_backups/opt/puppetlabs/puppet/modules/puppet_enterprise'),
-          match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise /opt/puppetlabs/puppet/modules/puppet_enterprise'),
+          match("ln -s #{remote_src_fixture_dir}/pem/lovejoy/modules/puppet_enterprise /opt/puppetlabs/puppet/modules/puppet_enterprise"),
         ])
       end
 
       it 'links only to enterprise modulepath' do
-        expect { tester.link_module('puppet_enterprise', link: 'enterprise', modules_root: remote_src_fixture_dir) }.to output(%r{\A--> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise.*\Z}).to_stdout
+        expect { tester.link_module('puppet_enterprise', 'lovejoy', link: 'enterprise', src_dir: remote_src_fixture_dir) }.to output(%r{\A--> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise.*\Z}).to_stdout
         expect(runner.commands).to match([
           match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules'),
           match('mv -T /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
-          match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
+          match("ln -s #{remote_src_fixture_dir}/pem/lovejoy/modules/puppet_enterprise /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise"),
         ])
       end
 
       it 'links to both modulepaths' do
-        expect { tester.link_module('puppet_enterprise', link: 'both', modules_root: remote_src_fixture_dir) }.to output(%r{--> Replacing /opt/puppetlabs/puppet/modules/puppet_enterprise.*--> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise}m).to_stdout
+        expect { tester.link_module('puppet_enterprise', 'lovejoy', link: 'both', src_dir: remote_src_fixture_dir) }.to output(%r{--> Replacing /opt/puppetlabs/puppet/modules/puppet_enterprise.*--> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise}m).to_stdout
         expect(runner.commands).to match([
           match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/puppet/modules'),
           match('mv -T /opt/puppetlabs/puppet/modules/puppet_enterprise /root/_meep_tools_backups/opt/puppetlabs/puppet/modules/puppet_enterprise'),
-          match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise /opt/puppetlabs/puppet/modules/puppet_enterprise'),
+          match("ln -s #{remote_src_fixture_dir}/pem/lovejoy/modules/puppet_enterprise /opt/puppetlabs/puppet/modules/puppet_enterprise"),
           match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules'),
           match('mv -T /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
-          match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/puppet_enterprise /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise'),
+          match("ln -s #{remote_src_fixture_dir}/pem/lovejoy/modules/puppet_enterprise /opt/puppetlabs/server/data/environments/enterprise/modules/puppet_enterprise"),
         ])
       end
 
       context 'pe_manager' do
         it 'only links pe_manager in the enterprise path' do
-          expect { tester.link_module('pe_manager', link: 'both', modules_root: remote_src_fixture_dir) }.to output(%r{\A--> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/pe_manager}m).to_stdout
+          expect { tester.link_module('pe_manager', 'lovejoy', link: 'both', src_dir: remote_src_fixture_dir) }.to output(%r{\A--> Replacing /opt/puppetlabs/server/data/environments/enterprise/modules/pe_manager}m).to_stdout
           expect(runner.commands).to match([
             match('mkdir -p /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules'),
             match('mv -T /opt/puppetlabs/server/data/environments/enterprise/modules/pe_manager /root/_meep_tools_backups/opt/puppetlabs/server/data/environments/enterprise/modules/pe_manager'),
-            match('ln -s /home/jpartlow/work/src/meep_tools/spec/fixtures/test-src/puppet-enterprise-modules/modules/pe_manager /opt/puppetlabs/server/data/environments/enterprise/modules/pe_manager'),
+            match("ln -s #{remote_src_fixture_dir}/pem/lovejoy/modules/pe_manager /opt/puppetlabs/server/data/environments/enterprise/modules/pe_manager"),
           ])
         end
 
         it 'does nothing if forced base' do
-          expect { tester.link_module('pe_manager', link: 'base', modules_root: remote_src_fixture_dir) }.to output(%r{\A--> Note: requested base link of pe_manager skipped}).to_stdout
+          expect { tester.link_module('pe_manager', 'lovejoy', link: 'base', src_dir: remote_src_fixture_dir) }.to output(%r{\A--> Note: requested base link of pe_manager skipped}).to_stdout
           expect(runner.commands).to be_empty
         end
       end
