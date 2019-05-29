@@ -119,14 +119,19 @@ class TestPostgresql < Thor
     end
   end
 
-  desc 'peconf', 'Write out a pe.conf on the nodes, setting puppet_master_host and postgres_version_override'
-  method_option :postgres_version, :type => :string, :enum => VERSIONS, :required => true
+  desc 'peconf', 'Write out a pe.conf on the nodes, setting puppet_master_host and postgres_version_override if given'
+  method_option :postgres_version, :type => :string, :enum => VERSIONS
   def peconf
     action('Write a /root/pe.conf') do
-      pg_version = options[:postgres_version] == '96' ? '9.6' : options[:postgres_version]
+      other_parameters = case
+      when options.include?(:postgres_version) then
+        pg_version = options[:postgres_version] == '96' ? '9.6' : options[:postgres_version]
+        %Q{other_parameters='{"puppet_enterprise::postgres_version_override":"#{pg_version}"}'}
+      else ''
+      end
       hosts.values.each do |host|
         action("on #{host}") do
-          run(%Q|#{bolt} plan run enterprise_tasks::testing::write_pe_conf primary=#{host} console_admin_password=password other_parameters='{"puppet_enterprise::postgres_version_override":"#{pg_version}"}' -n #{host}|)
+          run(%Q|#{bolt} plan run enterprise_tasks::testing::write_pe_conf primary=#{host} console_admin_password=password #{other_parameters} -n #{host}|)
         end
       end
     end
