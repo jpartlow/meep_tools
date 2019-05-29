@@ -1,19 +1,21 @@
+require 'pp'
+
 module MeepTools
   module Symlinker
     PUPPET_MODULES_PATH     = "/opt/puppetlabs/puppet/modules"
     ENTERPRISE_MODULES_PATH = "/opt/puppetlabs/server/data/environments/enterprise/modules"
 
     def remote_src_dir
-      "/#{ENV['USER']}-src"
+      "/remote-src"
     end
 
-    def available_modules(modules_root = remote_src_dir)
-      pem_modules = Dir.glob("#{modules_root}/puppet-enterprise-modules/modules/*").inject({}) do |hash,path|
+    def available_modules(branch, src_dir = remote_src_dir)
+      pem_modules = Dir.glob("#{src_dir}/pem/#{branch}/modules/*").inject({}) do |hash,path|
         mod = path.split('/').last
         hash[mod] = path
         hash
       end
-      other_modules = Dir.glob("#{modules_root}/pe-modules/*").inject({}) do |hash,path|
+      other_modules = Dir.glob("#{src_dir}/pe-modules/*").inject({}) do |hash,path|
         mod = path.split('/').last.gsub(/^puppetlabs-/,'')
         hash[mod] = path
         hash
@@ -21,12 +23,12 @@ module MeepTools
       pem_modules.merge(other_modules)
     end
 
-    def link_module(module_name, link: 'both', modules_root: remote_src_dir)
+    def link_module(module_name, branch, link: 'both', src_dir: remote_src_dir)
       base_module = ['both','base'].include?(link) && module_name != 'pe_manager'
       enterprise_module = ['both','enterprise'].include?(link)
 
-      available = available_modules(modules_root)
-      if  source_dir = available[module_name]
+      available = available_modules(branch, src_dir)
+      if source_dir = available[module_name]
         link_directory(source_dir, "#{PUPPET_MODULES_PATH}/#{module_name}") if base_module
         link_directory(source_dir, "#{ENTERPRISE_MODULES_PATH}/#{module_name}") if enterprise_module
         if !(base_module || enterprise_module)

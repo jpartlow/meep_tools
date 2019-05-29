@@ -7,9 +7,18 @@
       "type": "Array[String]"
     },
     "link": {
-      "description": "Whether to link module in basemodulepath, enterprise modulepath, or both (default)",
+      "description": "Whether to link module in basemodulepath, enterprise modulepath, or both (default).",
       "type": "Enum[base,enterprise,both]",
       "default": "both"
+    },
+    "branch": {
+      "description": "Branch of PE to link local source modules from.",
+      "type": "Enum[irving,johnson,kearney,lovejoy]"
+    },
+    "src_dir": {
+      "description": "Root source directory to link from.",
+      "type": "Pattern[/\\/.*/]",
+      "default": "/remote-src"
     }
   },
   "files": [
