@@ -7,7 +7,7 @@
 # built packages.
 plan meep_tools::inject_packages(
   TargetSpec $nodes,
-  Meep_tools::Pe_family $pe_family,
+  Enterprise_tasks::Pe_family $pe_family,
   Enum['96','10','11'] $postgres_version,
   # Absolute path to the local Vanagon directory containing pre-built
   # pe-postgreql packages.
@@ -17,7 +17,7 @@ plan meep_tools::inject_packages(
 
   get_targets($nodes).each |$node| {
     $osfacts = $node.facts['os']
-    $_platform_tag = meep_tools::platform_tag($osfacts)
+    $_platform_tag = enterprise_tasks::platform_tag($osfacts)
     $vanagon_vars = meep_tools::get_vanagon_output_vars($osfacts)
     $ext = $vanagon_vars['ext']
     $sep = $vanagon_vars['sep']

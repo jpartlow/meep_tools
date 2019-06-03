@@ -115,7 +115,7 @@ class TestPostgresql < Thor
     action('Get a PE tarball onto the hosts and unpack it') do
       args = pe_family_or_version(options)
       raise(RuntimeError, "Must set either --pe-family or --pe-version.") if args.empty?
-      run("#{bolt} plan run meep_tools::get_pe #{args.join(' ')} -n #{hosts.values.join(',')}")
+      run("#{bolt} plan run enterprise_tasks::testing::get_pe #{args.join(' ')} -n #{hosts.values.join(',')}")
     end
   end
 
