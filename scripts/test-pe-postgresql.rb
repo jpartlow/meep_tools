@@ -151,7 +151,7 @@ class TestPostgresql < Thor
     end
   end
 
-  desc 'upgrade', 'Upgrade PE from a tarball already presen on the hosts'
+  desc 'upgrade', 'Upgrade PE from a tarball already present on the hosts'
   method_option :work_dir, :type => :string, :default => '/root'
   method_option :unpacked_tarball, :type => :string
   method_option :pe_version, :type => :string
