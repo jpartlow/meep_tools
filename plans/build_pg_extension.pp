@@ -4,7 +4,7 @@ plan meep_tools::build_pg_extension(
   Enterprise_tasks::Pe_family $pe_family,
   Enterprise_tasks::Pe_version $pe_version = 'latest',
   Enum['96','10','11'] $postgres_version,
-  Meep_tools::Absolute_path $puppet_enterprise_vanagon_dir,
+  Enterprise_tasks::Absolute_path $puppet_enterprise_vanagon_dir,
 ) {
   # This gets a PE tarball onto the node, unpacks and runs the installer in -p
   # prep mode which just sets up packaging.

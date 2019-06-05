@@ -11,7 +11,7 @@ plan meep_tools::inject_packages(
   Enum['96','10','11'] $postgres_version,
   # Absolute path to the local Vanagon directory containing pre-built
   # pe-postgreql packages.
-  Meep_tools::Absolute_path $output_dir,
+  Enterprise_tasks::Absolute_path $output_dir,
 ) {
   run_plan(facts, nodes => $nodes)
 
