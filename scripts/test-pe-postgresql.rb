@@ -131,37 +131,28 @@ class TestPostgresql < Thor
       end
       hosts.values.each do |host|
         action("on #{host}") do
-          run(%Q|#{bolt} plan run enterprise_tasks::testing::write_pe_conf primary=#{host} console_admin_password=password #{other_parameters} -n #{host}|)
+          run(%Q|#{bolt} plan run enterprise_tasks::testing::create_pe_conf master=#{host} console_admin_password=password #{other_parameters} -n #{host}|)
         end
       end
     end
   end
 
   desc 'install', 'Install PE from a tarball already present on the hosts'
-  method_option :work_dir, :type => :string, :default => '/root'
-  method_option :unpacked_tarball, :type => :string
   method_option :pe_version, :type => :string
-  method_option :pe_family, :type => :string
   method_option :debug_logging, :type => :boolean, :default => false
-  method_option :pe_conf_file, :type => :string, :default => '/root/pe.conf'
   def install
-    args = tarball_args(options)
     action("Install PE on hosts based on #{args.join(' ')}") do
-      run(%Q|#{bolt} task run enterprise_tasks::testing_installer work_dir=#{options[:work_dir]} #{args.join(' ')} pe_conf_file=#{options[:pe_conf_file]} debug_logging=#{options[:debug_logging]} -n #{hosts.values.join(',')}|)
+      run(%Q|#{bolt} task run enterprise_tasks::testing::run_installer version=#{pe_version} debug_logging=#{options[:debug_logging]} -n #{hosts.values.join(',')}|)
     end
   end
 
   desc 'upgrade', 'Upgrade PE from a tarball already present on the hosts'
-  method_option :work_dir, :type => :string, :default => '/root'
-  method_option :unpacked_tarball, :type => :string
   method_option :pe_version, :type => :string
-  method_option :pe_family, :type => :string
   method_option :debug_logging, :type => :boolean, :default => false
   method_option :non_interactive, :type => :boolean, :default => true
   def upgrade
-    args = tarball_args(options)
     action("Upgrade PE on hosts based on #{args.join(' ')}") do
-      run(%Q|#{bolt} task run enterprise_tasks::testing_installer work_dir=#{options[:work_dir]} #{args.join(' ')} non_interactive=#{options[:non_interactive]} debug_logging=#{options[:debug_logging]} -n #{hosts.values.join(',')}|)
+      run(%Q|#{bolt} task run enterprise_tasks::testing::run_installer version=#{pe_version} non_interactive=#{options[:non_interactive]} debug_logging=#{options[:debug_logging]} -n #{hosts.values.join(',')}|)
     end
   end
 
@@ -345,19 +336,9 @@ class TestPostgresql < Thor
     #   if given, suitable for passing to bolt.
     def pe_family_or_version(opts)
       args = []
-      args << "pe_family=#{opts[:pe_family]}" if !opts[:pe_family].nil?
-      args << "pe_version=#{opts[:pe_version]}" if !opts[:pe_version].nil?
-      args
-    end
-
-
-    # @return [Array<String>] an array of the unpacked_tarball, pe_family
-    #   and/or pe_version args, if given, suitable for passing to bolt.
-    # @raise RuntimeError if none of the args given.
-    def tarball_args(opts)
-      args = pe_family_or_version(opts)
-      args < "unpacked_tarball=#{opts[:unpacked_tarball]}" if !opts[:unpacked_tarball].nil?
-      raise(RuntimeError, "Must set either --unpacked-tarball, --pe-version or --pe-family in order to find a PE directory to install from on the given hosts.") if args.empty?
+      args = "version=#{opts[:pe_family]}" if !opts[:pe_family].nil?
+      # pe_version, being more specific, takes precedence
+      args = "version=#{opts[:pe_version]}" if !opts[:pe_version].nil?
       args
     end
 
