@@ -86,25 +86,34 @@ class TestPostgresql < Thor
 
   desc 'create', 'Generate one or more vmpooler test hosts, if they do not already exist'
   method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
+  method_option :count, :type => :numeric, :default => 1
   def create_hosts
     action('Verify or create hosts') do
       all_successful do |results|
         options[:platforms].each do |p|
-          host = hosts[p]
-          results << (live?(host) ?
+          host_array = Array(hosts[p])
+          results << (live?(host_array) ?
             true :
-            create_host_for(p)
+            create_hosts_for(p, options[:count])
           )
         end
         write_hosts_cache
+        out("Created hosts:\n#{hosts.pretty_inspect}")
       end
+    end
+  end
+
+  desc 'delete', 'Ensure all vmpooler hosts referenced in the cache are released'
+  def delete_hosts
+    action('Delete hosts') do
+      run("floaty delete #{all_hosts.join(',')}")
     end
   end
 
   desc 'mount', 'Mount local $HOME/work/src into each of the vmpooler test hosts'
   def mount_nfs_hosts
     action('Create NFS mounts on hosts') do
-      run("#{bolt} plan run meep_tools::nfs_mount -n #{hosts.values.join(',')}")
+      run("#{bolt} plan run meep_tools::nfs_mount -n #{all_hosts.join(',')}")
     end
   end
 
@@ -115,7 +124,7 @@ class TestPostgresql < Thor
     action('Get a PE tarball onto the hosts and unpack it') do
       args = pe_family_or_version(options)
       raise(RuntimeError, "Must set either --pe-family or --pe-version.") if args.empty?
-      run("#{bolt} plan run enterprise_tasks::testing::get_pe #{args.join(' ')} -n #{hosts.values.join(',')}")
+      run("#{bolt} plan run enterprise_tasks::testing::get_pe #{args.join(' ')} -n #{all_hosts.join(',')}")
     end
   end
 
@@ -129,7 +138,7 @@ class TestPostgresql < Thor
         %Q{other_parameters='{"puppet_enterprise::postgres_version_override":"#{pg_version}"}'}
       else ''
       end
-      hosts.values.each do |host|
+      all_hosts.each do |host|
         action("on #{host}") do
           run(%Q|#{bolt} plan run enterprise_tasks::testing::create_pe_conf master=#{host} console_admin_password=password #{other_parameters} -n #{host}|)
         end
@@ -142,7 +151,7 @@ class TestPostgresql < Thor
   method_option :debug_logging, :type => :boolean, :default => false
   def install
     action("Install PE on hosts based on #{args.join(' ')}") do
-      run(%Q|#{bolt} task run enterprise_tasks::testing::run_installer version=#{pe_version} debug_logging=#{options[:debug_logging]} -n #{hosts.values.join(',')}|)
+      run(%Q|#{bolt} task run enterprise_tasks::testing::run_installer version=#{pe_version} debug_logging=#{options[:debug_logging]} -n #{all_hosts.join(',')}|)
     end
   end
 
@@ -152,7 +161,7 @@ class TestPostgresql < Thor
   method_option :non_interactive, :type => :boolean, :default => true
   def upgrade
     action("Upgrade PE on hosts based on #{args.join(' ')}") do
-      run(%Q|#{bolt} task run enterprise_tasks::testing::run_installer version=#{pe_version} non_interactive=#{options[:non_interactive]} debug_logging=#{options[:debug_logging]} -n #{hosts.values.join(',')}|)
+      run(%Q|#{bolt} task run enterprise_tasks::testing::run_installer version=#{pe_version} non_interactive=#{options[:non_interactive]} debug_logging=#{options[:debug_logging]} -n #{all_hosts.join(',')}|)
     end
   end
 
@@ -160,7 +169,7 @@ class TestPostgresql < Thor
   method_option :pe_family, :type => :string, :required => true
   def prep
     action('Prep pe on the hosts') do
-      run("#{bolt} plan run meep_tools::prep_pe pe_family=#{options[:pe_family]} -n #{hosts.values.join(',')}")
+      run("#{bolt} plan run meep_tools::prep_pe pe_family=#{options[:pe_family]} -n #{all_hosts.join(',')}")
     end
   end
 
@@ -200,7 +209,7 @@ class TestPostgresql < Thor
   def inject
     action("Inject locally built pe-postgresql packages into latest PE #{options[:pe_family]} tarball on all test hosts.") do
       vanagon_output_dir = "#{get_vanagon_path}/output"
-      run("#{bolt} plan run meep_tools::inject_packages pe_family=#{options[:pe_family]} postgres_version=#{options[:postgres_version]} output_dir=#{vanagon_output_dir} -n #{hosts.values.join(',')}")
+      run("#{bolt} plan run meep_tools::inject_packages pe_family=#{options[:pe_family]} postgres_version=#{options[:postgres_version]} output_dir=#{vanagon_output_dir} -n #{all_hosts.join(',')}")
     end
   end
 
@@ -213,7 +222,7 @@ class TestPostgresql < Thor
       nodes = []
 
       action('Get package file lists') do
-        output = capture("#{bolt} task run meep_tools::get_package_file_lists packages='#{JSON.dump(package_names)}' -n #{hosts.values.join(',')} --format=json")
+        output = capture("#{bolt} task run meep_tools::get_package_file_lists packages='#{JSON.dump(package_names)}' -n #{all_hosts.join(',')} --format=json")
         output = JSON.parse(output)
         nodes = output["items"]
       end
@@ -328,6 +337,11 @@ class TestPostgresql < Thor
       @hosts ||= TestPostgresql.read_hosts_cache
     end
 
+    # @return [Array] collects all the hosts into a single array regardless of platform.
+    def all_hosts
+      hosts.values.flatten
+    end
+
     def hosts=(hosts_cache)
       @hosts = hosts_cache
     end
@@ -352,23 +366,29 @@ class TestPostgresql < Thor
       end
     end
 
-    def create_host_for(platform)
+    def create_hosts_for(platform, count)
       floaty_platform = translate_platform_for_vmfloaty(platform)
-      if out = capture("floaty get #{floaty_platform}")
-        # capturing something like:
-        # '- ves8qa9rzwbp4rv.delivery.puppetlabs.net (redhat-7-x86_64)'
-        host = out.split(' ')[1]
-        hosts[platform] = host
-        true
-      else
-        false
+      hosts[platform] = []
+      results = count.times.map do
+        if out = capture("floaty get #{floaty_platform}")
+          # capturing something like:
+          # '- ves8qa9rzwbp4rv.delivery.puppetlabs.net (redhat-7-x86_64)'
+          host = out.split(' ')[1]
+          hosts[platform] << host
+          true
+        else
+          false
+        end
       end
+      results.all?
     end
 
-    def live?(host)
-      host.nil? ?
-        false :
-        test("floaty list --active | grep #{host}")
+    def live?(host_array)
+      !host_array.empty? && host_array.all? do |host|
+        host.nil? ?
+          false :
+          test("floaty list --active | grep #{host}")
+      end
     end
 
     def write_hosts_cache(hosts_cache_path = TestPostgresql.hosts_cache_file)
