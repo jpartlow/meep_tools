@@ -159,6 +159,18 @@ class TestPostgresql < Thor
     end
   end
 
+  desc 'frankenbuild', 'Generate frankenbuild tarballs for each platform with the given puppet-enterprise-modules patch, concurrently'
+  method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
+  method_option :pem_pr, :type => :numeric
+  method_option :pe_family, :type => :string
+  def frankenbuild
+    action("Frankenbuild tarballs with p-e-m pr##{options[:pem_pr]}") do
+      run_threaded_product('Frankenbuilding', platform: options[:platforms]) do |variant|
+        run(%Q|#{bolt} plan run meep_tools::frankenbuild_tarball platform=#{variant[:platform]} pe_family=#{options[:pe_family]} pem_pr=#{options[:pem_pr]} pe_builds_dir=#{pe_builds_dir}|)
+      end
+    end
+  end
+
   desc 'prep', 'Prep a PE install on the hosts with the -p option (download tarball, setup package repository, do not install)'
   method_option :pe_family, :type => :string, :required => true
   def prep
@@ -310,6 +322,11 @@ class TestPostgresql < Thor
     # So falling back to the absolute path of the package binary.
     def bolt
       "/opt/puppetlabs/bin/bolt"
+    end
+
+    # Location of local PE tarballs.
+    def pe_builds_dir
+      "#{ENV['HOME']}/pe_builds"
     end
 
     def debugging?
