@@ -7,9 +7,6 @@ require 'parse_options'
 # returns an IO object intended to receive the output of executed commands.
 module RunShellExecutable
 
-  # Per Thread state
-  attr_accessor :context
-
   # Treating the debug flag as global state
   attr_accessor :debug
 
@@ -36,57 +33,59 @@ module RunShellExecutable
     end
   end
 
-  # Allows you to interact with the RunShellExecutable.thread_context prior to
-  # instantiating any instances of classes mixing in RunShellExecutable.
-  # This lets you preset the context.io for testing, for example.
-  def self.thread_context
-    Thread.current[:context] ||= Context.new
+  # The Context object for the main thread, stored in an instance
+  # variable so that non-threaded actions don't need to worry about
+  # Thread variables.
+  def main_context
+    @main_context ||= Context.new
   end
 
-  def self.thread_context=(new_context)
-    Thread.current[:context] = new_context
+  # The Context object for any Thread other than main.
+  # Since this is a Thread variable, we can vary output
+  # per Thread if necessary.
+  def thread_context
+    Thread.current[:runshell_context] ||= Context.new(main_context.to_h)
   end
 
-  # Returns a copy of the Thread.main :context's state.
-  def self.copy_main_context
-    main_context = Thread.main[:context]
-    Context.new(main_context.to_h)
-  end
-
-  def context
-    RunShellExecutable.thread_context
+  # The Context object for the current thread. Controls what IO we
+  # use for output, the current output level and muzzle settings.
+  # Defaults to main_context() if this is Thread.main.
+  def runshell_context
+    Thread.current == Thread.main ?
+      main_context :
+      thread_context
   end
 
   def muzzle
-    self.context.muzzle
+    self.runshell_context.muzzle
   end
 
   def muzzle=(value)
-    self.context.muzzle = value
+    self.runshell_context.muzzle = value
   end
 
   def original_muzzle
-    self.context.original_muzzle
+    self.runshell_context.original_muzzle
   end
 
   def original_muzzle=(value)
-    self.context.original_muzzle = value
+    self.runshell_context.original_muzzle = value
   end
 
   def level
-    self.context.level
+    self.runshell_context.level
   end
 
   def level=(value)
-    self.context.level = value
+    self.runshell_context.level = value
   end
 
   def io
-    self.context.io
+    self.runshell_context.io
   end
 
   def io=(value)
-    self.context.io = value
+    self.runshell_context.io = value
   end
 
   # Abstraction of the actual shell execution.

@@ -70,9 +70,17 @@ class TestPostgresql < Thor
     return true
   end
 
-  def self.invoke(args, stdout_io = $stdout)
-    RunShellExecutable.thread_context.io = stdout_io
-    TestPostgresql.start(args)
+  def self.invoke(args, stdout_io = nil)
+    config = {}
+    config[:_runshell_stdout_io] = stdout_io if !stdout_io.nil?
+    TestPostgresql.start(args, config)
+  end
+
+  def initialize(args = [], opts = [], config = {})
+    # Reset output io if we were invoked with a different io instance
+    # (typically for testing)
+    self.io = config.delete(:_runshell_stdout_io) if config.include?(:_runshell_stdout_io)
+    super(args, opts, config)
   end
 
   include RunShellExecutable
@@ -165,7 +173,7 @@ class TestPostgresql < Thor
   method_option :pe_family, :type => :string
   def frankenbuild
     action("Frankenbuild tarballs with p-e-m pr##{options[:pem_pr]}") do
-      run_threaded_product('Frankenbuilding', platform: options[:platforms]) do |variant|
+      run_threaded_product('Frankenbuild', platform: options[:platforms]) do |variant|
         run(%Q|#{bolt} plan run meep_tools::frankenbuild_tarball platform=#{variant[:platform]} pe_family=#{options[:pe_family]} pem_pr=#{options[:pem_pr]} pe_builds_dir=#{pe_builds_dir}|)
       end
     end
@@ -447,5 +455,4 @@ end
 # Execute if the script is called on the command line.
 if $0 == __FILE__
   TestPostgresql.invoke(ARGV)
-  #exit(result)
 end

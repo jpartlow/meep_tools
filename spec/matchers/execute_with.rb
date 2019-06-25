@@ -8,7 +8,7 @@ RSpec::Matchers.define(:execute) do
 
     if defined?(Thor) == 'constant' && klass_or_instance.kind_of?(Thor)
       @runner = klass_or_instance
-      @runner.context.io = @stdout_tmp
+      @runner.io = @stdout_tmp
     else
       begin
         if defined?(Thor) == 'constant' && klass_or_instance < Thor
