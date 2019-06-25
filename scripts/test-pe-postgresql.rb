@@ -3,6 +3,7 @@
 TEST_PE_POSTGRESQL_ROOT_DIR=File.expand_path(File.join(File.dirname(__FILE__),'..'))
 $LOAD_PATH << File.join(TEST_PE_POSTGRESQL_ROOT_DIR,'lib')
 require 'run_shell'
+require 'meep_tools/threaded'
 require 'json'
 require 'thor'
 require 'diff_matcher'
@@ -75,6 +76,7 @@ class TestPostgresql < Thor
   end
 
   include RunShellExecutable
+  include MeepTools::Threaded
 
   desc 'create', 'Generate one or more vmpooler test hosts, if they do not already exist'
   method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
@@ -387,17 +389,6 @@ class TestPostgresql < Thor
       options[:packages].map { |p| p % options[:version] }
     end
 
-    def _package_build_thread(platform, package, vanagon_path)
-      Thread.new do
-        Thread.current[:platform] = platform
-        Thread.current[:package] = package
-        Thread.current[:level] = Thread.main[:level] || 0
-        Thread.current[:success] = action("Starting: Build #{package} for #{platform}...") do
-          run("bundle exec build #{package} #{platform}", :chdir => vanagon_path)
-        end
-      end
-    end
-
     def get_vanagon_path
       vanagon_path = options[:vanagon_path] ? "#{options[:vanagon_path]}" : Dir.pwd
       if !vanagon_path.include?('puppet-enterprise-vanagon')
@@ -409,15 +400,9 @@ class TestPostgresql < Thor
 
     def _build_packages(platforms, package_names)
       vanagon_path = get_vanagon_path
-      threads = platforms.product(package_names).map do |i|
-        platform, package = i
-        _package_build_thread(platform, package, vanagon_path)
+      run_threaded_product('Build', platform: platforms, package: package_names) do |variants|
+        run("bundle exec build #{variants[:package]} #{variants[:platform]}", :chdir => vanagon_path)
       end
-      threads.each do |t|
-        t.join
-        out("Finished: Build #{t[:package]} for #{t[:platform]}")
-      end
-      threads.all? { |t| t[:success] }
     end
   end
 end
