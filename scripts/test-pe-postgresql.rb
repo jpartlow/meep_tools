@@ -171,6 +171,26 @@ class TestPostgresql < Thor
     end
   end
 
+  desc 'test_migration', 'Test a database migration from a given PE version to another version or local tarball'
+  method_option :install_version, :type => :string
+  method_option :upgrade_version, :type => :string
+  method_option :upgrade_tarball_version, :type => :string
+  def test_migration
+    action('Test migration') do
+      platforms = hosts.keys
+      run_threaded_product('Migration test', platform: platforms) do |variant|
+        platform = variant[:platform]
+        command = ["#{bolt} plan run enterprise_tasks::testing::upgrade_workflow"]
+        command << "nodes=#{hosts[platform].join(',')}"
+        command << "upgrade_from=#{options[:install_version]}"
+        command << "upgrade_to_version=#{options[:upgrade_version]}" if options.include?('upgrade_version')
+        command << "upgrade_to_tarball='#{pe_builds_dir}/puppet-enterprise-#{options[:upgrade_tarball_version]}-#{p}.tar.gz'" if options.include?('upgrade_tarball_version')
+        command << %Q{update_pe_conf='{"puppet_enterprise::postgres_version_override":"11"}'}
+        run(command.join(' '))
+      end
+    end
+  end
+
   desc 'prep', 'Prep a PE install on the hosts with the -p option (download tarball, setup package repository, do not install)'
   method_option :pe_family, :type => :string, :required => true
   def prep
