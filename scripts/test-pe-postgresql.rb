@@ -69,16 +69,8 @@ class TestPostgresql < Thor
     return true
   end
 
-  def self.io
-    @io
-  end
-
-  def self.io=(io)
-    @io = io
-  end
-
   def self.invoke(args, stdout_io = $stdout)
-    @io = stdout_io
+    RunShellExecutable.thread_context.io = stdout_io
     TestPostgresql.start(args)
   end
 
@@ -321,10 +313,6 @@ class TestPostgresql < Thor
     def debugging?
       # Thor class_option :debug
       options[:debug]
-    end
-
-    def io
-      TestPostgresql.io
     end
 
     def all_successful(&block)

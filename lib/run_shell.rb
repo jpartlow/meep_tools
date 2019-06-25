@@ -7,9 +7,99 @@ require 'parse_options'
 # returns an IO object intended to receive the output of executed commands.
 module RunShellExecutable
 
-  attr_accessor :io, :debug, :muzzle, :original_muzzle
+  # Per Thread state
+  attr_accessor :context
+
+  # Treating the debug flag as global state
+  attr_accessor :debug
 
   class ActionFailed < StandardError; end
+
+  # Holds the state for one Thread's output activity.
+  class Context
+    attr_accessor :io, :level, :muzzle, :original_muzzle
+
+    def initialize(io: $stdout, level: 0, muzzle: false, original_muzzle: false)
+      self.io = io
+      self.level = level
+      self.muzzle = muzzle
+      self.original_muzzle = original_muzzle
+    end
+
+    def to_h
+      {
+        io: self.io,
+        level: self.level,
+        muzzle: self.muzzle,
+        original_muzzle: self.original_muzzle,
+      }
+    end
+  end
+
+  # Allows you to interact with the RunShellExecutable.thread_context prior to
+  # instantiating any instances of classes mixing in RunShellExecutable.
+  # This lets you preset the context.io for testing, for example.
+  def self.thread_context
+    Thread.current[:context] ||= Context.new
+  end
+
+  def self.thread_context=(new_context)
+    Thread.current[:context] = new_context
+  end
+
+  # Returns a copy of the Thread.main :context's state.
+  def self.copy_main_context
+    main_context = Thread.main[:context]
+    Context.new(main_context.to_h)
+  end
+
+  def context
+    RunShellExecutable.thread_context
+  end
+
+  def muzzle
+    self.context.muzzle
+  end
+
+  def muzzle=(value)
+    self.context.muzzle = value
+  end
+
+  def original_muzzle
+    self.context.original_muzzle
+  end
+
+  def original_muzzle=(value)
+    self.context.original_muzzle = value
+  end
+
+  def level
+    self.context.level
+  end
+
+  def level=(value)
+    self.context.level = value
+  end
+
+  def io
+    self.context.io
+  end
+
+  def io=(value)
+    self.context.io = value
+  end
+
+  # Abstraction of the actual shell execution.
+  class Executor
+    def exec(command, options = {})
+      Open3.capture2e(command, options)
+    end
+  end
+
+  # Other (test) Executor implementations may be mocked here.
+  def self.executor
+    Executor.new
+  end
 
   # Whether or not something has set @debug for additional output detail.
   def debugging?
@@ -19,14 +109,6 @@ module RunShellExecutable
   # Whether or not something has set @muzzle to true to temporarily block output.
   def muzzled?
     self.muzzle
-  end
-
-  def level
-    Thread.current[:level] ||= 0
-  end
-
-  def level=(value)
-    Thread.current[:level] = value
   end
 
   def colorize(color_code, string)
@@ -51,12 +133,12 @@ module RunShellExecutable
 
   def out(string, options = {})
     bump_level = options[:bump_level] || 0
-    io.puts indent(string, bump_level)
+    self.io.puts(indent(string, bump_level))
     return true
   end
 
   def indent(string, bump_level = 0)
-    indentation = "  " * (level + bump_level)
+    indentation = "  " * (self.level + bump_level)
     string.split("\n").map { |s| indentation + s }.join("\n")
   end
 
@@ -75,16 +157,6 @@ module RunShellExecutable
   ensure
     self.muzzle = original_muzzle
     self.level -= 1
-  end
-
-  class Executor
-    def exec(command, options = {})
-      Open3.capture2e(command, options)
-    end
-  end
-
-  def self.executor
-    Executor.new
   end
 
   def run(command, options = {})
