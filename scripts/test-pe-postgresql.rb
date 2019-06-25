@@ -199,6 +199,13 @@ class TestPostgresql < Thor
     end
   end
 
+  desc 'uninstall_pe', 'Run the puppet-enterprise-uninstaller script on each node to wipe away PE'
+  def uninstall_pe
+    action('Uninstall PE') do
+      run("#{bolt} command run '/opt/puppetlabs/bin/puppet-enterprise-uninstaller -ydp' -n #{all_hosts.join(',')}", debugging: true)
+    end
+  end
+
   desc 'prep', 'Prep a PE install on the hosts with the -p option (download tarball, setup package repository, do not install)'
   method_option :pe_family, :type => :string, :required => true
   def prep
