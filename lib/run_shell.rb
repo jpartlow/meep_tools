@@ -14,13 +14,13 @@ module RunShellExecutable
 
   # Holds the state for one Thread's output activity.
   class Context
-    attr_accessor :io, :level, :muzzle, :original_muzzle
+    attr_accessor :io, :level, :muzzle, :streaming
 
-    def initialize(io: $stdout, level: 0, muzzle: false, original_muzzle: false)
+    def initialize(io: $stdout, level: 0, muzzle: false, streaming: false)
       self.io = io
       self.level = level
       self.muzzle = muzzle
-      self.original_muzzle = original_muzzle
+      self.streaming = streaming
     end
 
     def to_h
@@ -28,7 +28,7 @@ module RunShellExecutable
         io: self.io,
         level: self.level,
         muzzle: self.muzzle,
-        original_muzzle: self.original_muzzle,
+        streaming: self.streaming
       }
     end
   end
@@ -61,15 +61,7 @@ module RunShellExecutable
   end
 
   def muzzle=(value)
-    self.runshell_context.muzzle = value
-  end
-
-  def original_muzzle
-    self.runshell_context.original_muzzle
-  end
-
-  def original_muzzle=(value)
-    self.runshell_context.original_muzzle = value
+    self.runshell_context.muzzle = !!value
   end
 
   def level
@@ -77,7 +69,7 @@ module RunShellExecutable
   end
 
   def level=(value)
-    self.runshell_context.level = value
+    self.runshell_context.level = value.to_i
   end
 
   def io
@@ -85,19 +77,46 @@ module RunShellExecutable
   end
 
   def io=(value)
+    raise(ArgumentError, "Expected an IO instance; got: '#{value}'") if !io.kind_of?(IO) && !io.kind_of?(StringIO)
     self.runshell_context.io = value
+  end
+
+  def streaming
+    self.runshell_context.streaming
+  end
+
+  def streaming=(value)
+    self.runshell_context.streaming = !!value
   end
 
   # Abstraction of the actual shell execution.
   class Executor
-    def exec(command, options = {})
+    def exec(command, options = {}, &_block)
       Open3.capture2e(command, options)
     end
   end
 
+  # Non blocking shell execution implementation. Streams output.
+  class StreamingExecutor
+    def exec(command, options = {}, &block)
+      status = Open3.popen2e(command, options) do |stdin, stdout_and_err, wait_thr|
+        stdin.close
+        stdout_and_err.sync = true
+        until stdout_and_err.eof?
+          yield(stdout_and_err)
+        end
+        wait_thr.value
+      end
+      return '', status
+    end
+  end
+
   # Other (test) Executor implementations may be mocked here.
-  def self.executor
-    Executor.new
+  # @param streaming [Boolean] if true will use the StreamingExecutor instead.
+  def self.executor(streaming = false)
+    streaming ?
+      StreamingExecutor.new :
+      Executor.new
   end
 
   # Whether or not something has set @debug for additional output detail.
@@ -142,12 +161,18 @@ module RunShellExecutable
   end
 
   def action(message, options = {})
-    self.original_muzzle = muzzle
+    original_muzzle = muzzle
+    original_streaming = streaming
     self.muzzle = options[:muzzle]
+    self.streaming = options[:streaming]
+
     out(green("* #{message} "))
     out(grey('(output suppressed...run with --debug for all output)'), :bump_level => 1) if muzzled? && !debugging?
     self.level += 1
+
+    # Do the action
     successful = yield
+
     if !successful
       out(red("Action failed!"))
       raise(ActionFailed, "Failed on step: #{message}")
@@ -155,21 +180,39 @@ module RunShellExecutable
     return successful
   ensure
     self.muzzle = original_muzzle
+    self.streaming = original_streaming
     self.level -= 1
   end
 
   def run(command, options = {})
     capture = options[:capture]
     test = options[:test]
+    stream_output = options[:streaming]
+    stream_output = streaming if stream_output.nil?
+
+    if capture && stream_output
+      stream_output = false
+      if debugging? && capture && options[:streaming]
+        out(grey("RunShell.run() was called with both the capture and the streaming flag set to true. The streaming flag will be ignored so that we capture output."))
+        out(grey(backtrace.pretty_inspect), :bump_level => 1)
+      end
+    end
+
+    out(cyan(command)) if debugging? || !muzzled?
 
     process_options = options.slice(:chdir)
-    stdout_and_err, status = RunShellExecutable.executor.exec(command, process_options)
+    stdout_and_err, status = RunShellExecutable.executor(stream_output).exec(command, process_options) do |pipe_io|
+      # Block only used by the StreamingExecutor.
+      nextline = pipe_io.gets
+      out(nextline, :bump_level => 1)
+      # Flush the output
+      io.fsync
+    end
 
     failed = !status.success?
-    out(cyan(command)) if debugging? || !muzzled?
     if debugging? || (!muzzled? && failed && !test)
       output = status.success? ? stdout_and_err : red(stdout_and_err)
-      out(output, :bump_level => 1)
+      out(output, :bump_level => 1) if !output.empty?
       out(grey("status: #{status.pretty_inspect.chomp!}"), :bump_level => 2 )
     end
     return capture ? stdout_and_err : status.success?

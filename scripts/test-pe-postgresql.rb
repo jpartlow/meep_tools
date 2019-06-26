@@ -186,13 +186,13 @@ class TestPostgresql < Thor
   def test_migration
     action('Test migration') do
       platforms = hosts.keys
-      run_threaded_product('Migration test', platform: platforms) do |variant|
+      run_threaded_product('Migration test', platform: platforms, _split_output: true) do |variant|
         platform = variant[:platform]
         command = ["#{bolt} plan run enterprise_tasks::testing::upgrade_workflow"]
         command << "nodes=#{hosts[platform].join(',')}"
         command << "upgrade_from=#{options[:install_version]}"
         command << "upgrade_to_version=#{options[:upgrade_version]}" if options.include?('upgrade_version')
-        command << "upgrade_to_tarball='#{pe_builds_dir}/puppet-enterprise-#{options[:upgrade_tarball_version]}-#{p}.tar.gz'" if options.include?('upgrade_tarball_version')
+        command << "upgrade_to_tarball='#{pe_builds_dir}/puppet-enterprise-#{options[:upgrade_tarball_version]}-#{platform}.tar.gz'" if options.include?('upgrade_tarball_version')
         command << %Q{update_pe_conf='{"puppet_enterprise::postgres_version_override":"11"}'}
         run(command.join(' '))
       end

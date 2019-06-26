@@ -2,14 +2,18 @@ require 'run_shell'
 
 module MeepTools
   module Threaded
-    def run_threaded_product(description, **variations, &block)
+    def run_threaded_product(description, _split_output: false, **variations, &block)
       product = generate_product_hashes(variations)
       threads = product.map do |variant|
         Thread.new do
           Thread.current[:variant] = variant
-          RunShellExecutable.thread_context = RunShellExecutable.copy_main_context
-          Thread.current[:success] = action("Starting: #{description} for #{variant} ...") do
-            yield(variant)
+          Thread.current[:success] = action(
+            "Starting: #{description} for #{variant} ...",
+            streaming: _split_output
+          ) do
+            separate_output(_split_output, variant) do
+              yield(variant)
+            end
           end
         end
       end
@@ -20,8 +24,28 @@ module MeepTools
       threads.all? { |t| t[:success] }
     end
 
-    def sorted_symbolized_keys(hash)
-      hash.keys.map { |k| k.to_sym }.sort 
+    def self.threaded_output_tmp_path
+      '/tmp/meep_tools_threaded_output'
+    end
+
+    def threaded_output_tmp_path
+      MeepTools::Threaded.threaded_output_tmp_path
+    end
+
+    def separate_output(separate, variant)
+      old_io = self.io
+      if separate
+        FileUtils.mkdir(threaded_output_tmp_path) unless Dir.exist?(threaded_output_tmp_path)
+        filename = "#{variant.to_a.join('_')}.out"
+        filepath = "#{threaded_output_tmp_path}/#{filename}"
+        new_io = File.open(filepath,'w')
+        out("Redirecting #{variant} output to #{filepath}")
+        self.io = new_io
+      end
+      yield
+    ensure
+      new_io.close if new_io
+      self.io = old_io
     end
 
     # Takes a hash of arrays, and returns an array of hashes of
