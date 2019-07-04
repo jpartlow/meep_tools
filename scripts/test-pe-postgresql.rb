@@ -45,6 +45,18 @@ class TestPostgresql < Thor
     "96",
   ].freeze
 
+  # Valid PE installation layouts
+  LAYOUTS = [
+    'mono',
+    'master_database',
+  ].freeze
+
+  # VMs needed per layout
+  LAYOUT_VM_COUNTS = {
+    'mono'            => 1,
+    'master_database' => 2,
+  }.freeze
+
   def self.hosts_cache
     HOSTS_CACHE
   end
@@ -70,6 +82,10 @@ class TestPostgresql < Thor
     return true
   end
 
+  def self.pe_builds_dir
+    "#{ENV['HOME']}/pe_builds"
+  end
+
   def self.invoke(args, stdout_io = nil)
     config = {}
     config[:_runshell_stdout_io] = stdout_io if !stdout_io.nil?
@@ -90,19 +106,7 @@ class TestPostgresql < Thor
   method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
   method_option :count, :type => :numeric, :default => 1
   def create_hosts
-    action('Verify or create hosts') do
-      all_successful do |results|
-        options[:platforms].each do |p|
-          host_array = Array(hosts[p])
-          results << (live?(host_array) ?
-            true :
-            create_hosts_for(p, options[:count])
-          )
-        end
-        write_hosts_cache
-        out("Created hosts:\n#{hosts.pretty_inspect}")
-      end
-    end
+    _create_hosts(options[:platforms], options[:count])
   end
 
   desc 'delete', 'Ensure all vmpooler hosts referenced in the cache are released'
@@ -180,20 +184,69 @@ class TestPostgresql < Thor
   end
 
   desc 'test_migration', 'Test a database migration from a given PE version to another version or local tarball'
-  method_option :install_version, :type => :string
-  method_option :upgrade_version, :type => :string
-  method_option :upgrade_tarball_version, :type => :string
+  method_option(
+    :install_versions,
+    :type => :array,
+    :desc => "The initial version to install. May be a space separated list if you want to test upgrades from different versions."
+  )
+  method_option(
+    :upgrade_version,
+    :type => :string,
+    :desc => "A specific version to upgrade to."
+  )
+  method_option(
+    :upgrade_tarball_version,
+    :type => :string,
+    :desc => "Alternately, the build version of a local frankenbuild stashed in #{TestPostgresql.pe_builds_dir} by the frankenbuild action."
+  )
+  method_option(
+    :layouts,
+    :type => :array,
+    :enum => LAYOUTS,
+    :default => ['mono'],
+    :desc => "The PE layout, or a space separated list of PE layouts, to test."
+  )
+  method_option(
+    :create_vms,
+    :type => :boolean,
+    :default => false,
+    :desc => "Generate/validate existence of an array of vms required to complete the testing."
+  )
   def test_migration
     action('Test migration') do
       platforms = hosts.keys
-      run_threaded_product('Migration test', platform: platforms, _split_output: true) do |variant|
+      install_versions = options[:install_versions]
+      version_variations = install_versions.size
+      layouts = options[:layouts]
+      create_vms = options[:create_vms]
+
+      # Count required vms per platform
+      layout_vms = layouts.sum { |l| LAYOUT_VM_COUNTS[l] }
+      vms_needed_per_platform = version_variations * layout_vms
+      out(grey("We will need #{vms_needed_per_platform} vms per platform to cover #{version_variations} install versions for #{layouts} layouts"))
+
+      if create_vms
+        _create_hosts(platforms, vms_needed_per_platform)
+      elsif hosts.values.first.size < vms_needed_per_platform
+        raise(RuntimeError, "Need #{vms_needed_per_platform} vms per platform. #{hosts.keys.first} only has #{hosts.values.first.size} listed. Run with --create-vms?")
+      end
+
+      available_hosts = hosts.dup.transform_values { |v| v.dup }
+
+      run_threaded_product('Migration test', platform: platforms, installed: install_versions, layout: layouts, _split_output: true) do |variant|
+
         platform = variant[:platform]
+        install_version = variant[:installed]
+        layout = variant[:layout]
+        assigned_hosts = available_hosts[platform].pop(LAYOUT_VM_COUNTS[layout])
+
         command = ["#{bolt} plan run enterprise_tasks::testing::upgrade_workflow"]
-        command << "nodes=#{hosts[platform].join(',')}"
-        command << "upgrade_from=#{options[:install_version]}"
+        command << "nodes=#{assigned_hosts.join(',')}"
+        command << "upgrade_from=#{install_version}"
         command << "upgrade_to_version=#{options[:upgrade_version]}" if options.include?('upgrade_version')
         command << "upgrade_to_tarball='#{pe_builds_dir}/puppet-enterprise-#{options[:upgrade_tarball_version]}-#{platform}.tar.gz'" if options.include?('upgrade_tarball_version')
         command << %Q{update_pe_conf='{"puppet_enterprise::postgres_version_override":"11"}'}
+        command << "--debug" if debugging?
         run(command.join(' '))
       end
     end
@@ -361,7 +414,7 @@ class TestPostgresql < Thor
 
     # Location of local PE tarballs.
     def pe_builds_dir
-      "#{ENV['HOME']}/pe_builds"
+      TestPostgresql.pe_builds_dir
     end
 
     def debugging?
@@ -408,9 +461,13 @@ class TestPostgresql < Thor
       end
     end
 
-    def create_hosts_for(platform, count)
+    def create_hosts_for(platform, count, adding: false)
       floaty_platform = translate_platform_for_vmfloaty(platform)
-      hosts[platform] = []
+      # It's possible we could have a case of only some hosts active, but
+      # it is more likely that all the cached refs are yesterdays and have
+      # been reaped. So we just replace the array unless we're specifically
+      # adding to it.
+      hosts[platform] = [] unless adding
       results = count.times.map do
         if out = capture("floaty get #{floaty_platform}")
           # capturing something like:
@@ -423,6 +480,25 @@ class TestPostgresql < Thor
         end
       end
       results.all?
+    end
+
+    def _create_hosts(platforms, count)
+      action('Verify or create hosts') do
+        all_successful do |results|
+          platforms.each do |p|
+            host_array = Array(hosts[p])
+            hosts_live = live?(host_array)
+            hosts_sufficient = host_array.size >= count
+            results << case
+            when hosts_live && hosts_sufficient then true
+            when hosts_live then create_hosts_for(p, count - host_array.size, adding: true)
+            else create_hosts_for(p, count)
+            end
+          end
+          write_hosts_cache
+          out("Created hosts:\n#{hosts.pretty_inspect}")
+        end
+      end
     end
 
     def live?(host_array)

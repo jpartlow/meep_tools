@@ -67,15 +67,15 @@ describe 'TestPostgresql' do
       context 'from a config with single hosts' do
         let(:test_cache) do
           {
-            'centos-6-x86_64' => 'foo.net',
-            'sles-12-x86_64' => 'bar.net',
+            'centos-6-x86_64' => ['foo.net'],
+            'sles-12-x86_64' => ['bar.net'],
           }
         end
 
         include_examples('writes modified configuration')
       end
 
-      context 'from a confgi with host arrays' do
+      context 'from a config with multiple hosts' do
         let(:test_cache) do
           {
             'centos-6-x86_64' => ['foo.net','foo2.net'],
@@ -179,9 +179,9 @@ describe 'TestPostgresql' do
       context 'and pre-existing cache of dead vms' do
         let(:old_cache) do
           {
-            'el-6-x86_64' => 'old1.net',
-            'ubuntu-18.04-amd64' => 'old2.net',
-            'sles-12-x86_64' => 'old3.net',
+            'el-6-x86_64' => ['old1.net'],
+            'ubuntu-18.04-amd64' => ['old2.net'],
+            'sles-12-x86_64' => ['old3.net'],
           }
         end
 
@@ -191,6 +191,50 @@ describe 'TestPostgresql' do
         end
 
         include_context 'multiple hosts'
+      end
+
+      context 'and a pre-existing cache of live vms' do
+        let(:old_cache) do
+          {
+            'el-6-x86_64' => ['live1.net'],
+            'ubuntu-18.04-amd64' => ['live2.net'],
+            'sles-12-x86_64' => ['live3.net'],
+          }
+        end
+
+        before(:each) do
+          TestExecutor.add_response(/floaty list/, ['found',0])
+          File.write(tmp_hosts_cache_path, old_cache.to_json)
+        end
+
+        it do
+          expect(tester).to(
+            execute
+              .and_call('create_hosts')
+              .and_output([
+                /Verify or create hosts/,
+              ])
+              .and_generate_commands([
+                /floaty get centos-6-x86_64/,
+                /floaty get ubuntu-1804-x86_64/,
+                /floaty get sles-12-x86_64/,
+              ])
+          )
+          expect(tester.hosts).to match({
+            'el-6-x86_64' => [
+              /^live1\.net$/,
+              /^\w+\.delivery\.puppetlabs\.net$/,
+            ],
+            'ubuntu-18.04-amd64' => [
+              /^live2\.net$/,
+              /^\w+\.delivery\.puppetlabs\.net$/,
+            ],
+            'sles-12-x86_64' => [
+              /^live3\.net$/,
+              /^\w+\.delivery\.puppetlabs\.net$/,
+            ],
+          })
+        end
       end
     end
   end
