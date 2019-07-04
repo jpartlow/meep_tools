@@ -11,7 +11,7 @@ plan meep_tools::frankenbuild_tarball(
   $workdir = $target.vars['workdir']
 
   run_command("git clone git@github.com:puppetlabs/frankenbuilder ${workdir}/frankenbuilder", $target)
-  run_command("cd ${workdir}/frankenbuilder; ./frankenbuilder ${pe_family} --workdir=${workdir}/frankenmodules --platform=${platform} --puppet-enterprise-module-pr=${pem_pr}", $target)
+  run_command("cd ${workdir}/frankenbuilder; ./frankenbuilder ${pe_family} --workdir=${workdir}/frankenmodules --platform=${platform} --puppet-enterprise-modules-pr=${pem_pr}", $target)
   run_command("mv ${workdir}/frankenbuilder/frankenbuild/puppet-enterprise-${pe_family}*.tar.gz ${pe_builds_dir}", $target)
   run_command("rm -rf ${workdir}", $target)
 }
