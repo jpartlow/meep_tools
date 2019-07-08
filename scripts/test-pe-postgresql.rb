@@ -103,9 +103,10 @@ class TestPostgresql < Thor
   include MeepTools::Threaded
 
   desc 'create', 'Generate one or more vmpooler test hosts, if they do not already exist'
-  method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
+  method_option :platforms, :type => :array, :default => PLATFORMS
   method_option :count, :type => :numeric, :default => 1
   def create_hosts
+    validate_enum(:platforms, PLATFORMS)
     _create_hosts(options[:platforms], options[:count])
   end
 
@@ -172,10 +173,11 @@ class TestPostgresql < Thor
   end
 
   desc 'frankenbuild', 'Generate frankenbuild tarballs for each platform with the given puppet-enterprise-modules patch, concurrently'
-  method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
+  method_option :platforms, :type => :array, :default => PLATFORMS
   method_option :pem_pr, :type => :numeric
   method_option :pe_family, :type => :string
   def frankenbuild
+    validate_enum(:platforms, PLATFORMS)
     action("Frankenbuild tarballs with p-e-m pr##{options[:pem_pr]}") do
       run_threaded_product('Frankenbuild', platform: options[:platforms]) do |variant|
         run(%Q|#{bolt} plan run meep_tools::frankenbuild_tarball platform=#{variant[:platform]} pe_family=#{options[:pe_family]} pem_pr=#{options[:pem_pr]} pe_builds_dir=#{pe_builds_dir}|)
@@ -202,7 +204,6 @@ class TestPostgresql < Thor
   method_option(
     :layouts,
     :type => :array,
-    :enum => LAYOUTS,
     :default => ['mono'],
     :desc => "The PE layout, or a space separated list of PE layouts, to test."
   )
@@ -213,6 +214,7 @@ class TestPostgresql < Thor
     :desc => "Generate/validate existence of an array of vms required to complete the testing."
   )
   def test_migration
+    validate_enum(:layouts, LAYOUTS)
     action('Test migration') do
       platforms = hosts.keys
       install_versions = options[:install_versions]
@@ -268,10 +270,12 @@ class TestPostgresql < Thor
   end
 
   desc 'build', 'Build pe-postgresql* packages for platforms, concurrently'
-  method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
-  method_option :packages, :type => :array, :enum => PACKAGES, :default => PACKAGES
+  method_option :platforms, :type => :array, :default => PLATFORMS
+  method_option :packages, :type => :array, :default => PACKAGES
   method_option :version, :type => :string, :enum => VERSIONS, :required => true
   def build
+    validate_enum(:platforms, PLATFORMS)
+    validate_enum(:packages, PACKAGES)
     action('Build pe-postgresql packages for a set of platforms (in parallel)') do
       package_names = construct_versioned_package_names
       _build_packages(options[:platforms], package_names)
@@ -279,18 +283,21 @@ class TestPostgresql < Thor
   end
 
   desc 'build_common', 'Build pe-postgresql-common package for platforms, concurrently'
-  method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
+  method_option :platforms, :type => :array, :default => PLATFORMS
   def build_common
+    validate_enum(:platforms, PLATFORMS)
     action('Build pe-postgresql-common package for a set of platforms (in parallel)') do
       _build_packages(options[:platforms], ['pe-postgresql-common'])
     end
   end
 
   desc 'build_extensions', 'Build the pe-postgresql*-{pglogical,pgrepack} extension package(s) for platforms, concurrently'
-  method_option :platforms, :type => :array, :enum => PLATFORMS, :default => PLATFORMS
-  method_option :packages, :type => :array, :enum => EXTENSIONS, :default => EXTENSIONS
+  method_option :platforms, :type => :array, :default => PLATFORMS
+  method_option :packages, :type => :array, :default => EXTENSIONS
   method_option :version, :type => :string, :enum => VERSIONS, :required => true
   def build_extensions
+    validate_enum(:platforms, PLATFORMS)
+    validate_enum(:packages, EXTENSIONS)
     action('Build pe-postgresql*-pglogical,pgrepack extension packages for a set of platforms (in parallel)') do
       package_names = construct_versioned_package_names
       _build_packages(options[:platforms], package_names)
@@ -308,9 +315,10 @@ class TestPostgresql < Thor
   end
 
   desc 'compare_packages', 'Compare contents of pe-postgresql* packages for all platforms'
-  method_option :packages, :type => :array, :enum => PACKAGES, :default => PACKAGES
+  method_option :packages, :type => :array, :default => PACKAGES
   method_option :version, :type => :string, :enum => VERSIONS, :required => true
   def compare_packages
+    validate_enum(:packages, PACKAGES)
     action('Compare pe-postgresql* package file lists for discrepancies') do
       package_names = construct_versioned_package_names
       nodes = []
@@ -532,6 +540,12 @@ class TestPostgresql < Thor
       run_threaded_product('Build', platform: platforms, package: package_names) do |variants|
         run("bundle exec build #{variants[:package]} #{variants[:platform]}", :chdir => vanagon_path)
       end
+    end
+
+    # Thor does not check :type => array's elements against :enum, unlike :string or :numeric...
+    def validate_enum(option, enum)
+      values = options[option]
+      values.all? { |a| enum.include?(a) } || raise(ArgumentError, "The --#{option} argument must consist of one or more space separated values from #{enum}. Got: #{values}")
     end
   end
 end
