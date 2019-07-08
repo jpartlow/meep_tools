@@ -201,9 +201,16 @@ describe 'TestPostgresql' do
             'sles-12-x86_64' => ['live3.net'],
           }
         end
+        let(:floaty_list) do
+          <<~EOS
+            - live1.net
+            - live2.net
+            - live3.net
+          EOS
+        end
 
         before(:each) do
-          TestExecutor.add_response(/floaty list/, ['found',0])
+          TestExecutor.add_response(/floaty list/, [floaty_list, 0])
           File.write(tmp_hosts_cache_path, old_cache.to_json)
         end
 

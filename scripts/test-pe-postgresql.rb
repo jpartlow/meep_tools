@@ -484,10 +484,11 @@ class TestPostgresql < Thor
 
     def _create_hosts(platforms, count)
       action('Verify or create hosts') do
+        active_host_list = capture("floaty list --active")
         all_successful do |results|
           platforms.each do |p|
             host_array = Array(hosts[p])
-            hosts_live = live?(host_array)
+            hosts_live = live?(host_array, active_host_list)
             hosts_sufficient = host_array.size >= count
             results << case
             when hosts_live && hosts_sufficient then true
@@ -501,11 +502,11 @@ class TestPostgresql < Thor
       end
     end
 
-    def live?(host_array)
+    def live?(host_array, active_host_list)
       !host_array.empty? && host_array.all? do |host|
         host.nil? ?
           false :
-          test("floaty list --active | grep #{host}")
+          !active_host_list.match(/#{host}/).nil?
       end
     end
 
