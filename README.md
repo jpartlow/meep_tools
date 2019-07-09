@@ -52,6 +52,8 @@ This script should be run from your puppet-enterprise-vanagon repo.
 The following notes assuming /s -> $HOME/work/src/meep_tools to save some
 space.
 
+This has been extended with several actions for testing postgresql migration.
+
 ## create
 
 Checks out a set of five test hosts (for each PE master platform) from
@@ -138,6 +140,12 @@ Then do
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys <key>
 ```
 Then continue with running the bolt plan.
+
+## test_migration
+
+This action can be used to test migration of pe-postgresql from 9.6 to 11 in 2019.2 builds.
+
+It relies on the enterprise_tasks::upgrade_workflow plan, and it's supporting plans and tasks.
 
 # rerun-pe-install-with-pe-postgresql10-packages.sh
 
