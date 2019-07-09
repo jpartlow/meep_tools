@@ -118,4 +118,57 @@ describe 'RunShell' do
         ])
     end
   end
+
+  # Test capture and popen executors.
+  context 'Executors' do
+    let(:options) { {} }
+
+    class TestExecutorClass
+      include RunShellExecutable
+
+      attr_accessor :options
+
+      def initialize(options)
+        self.options = options
+      end
+
+      def execute
+        run('echo "hi"', options)
+      end
+    end
+
+    let(:tester) { TestExecutorClass.new(options) }
+
+    it 'captures output' do
+      expect { tester.execute }.to output(<<~OUT
+        \e[36mecho \"hi\"\e[0m
+      OUT
+      ).to_stdout
+    end
+
+    context 'streaming' do
+      let(:options) { { streaming: true } }
+
+      it 'streams output' do
+        expect { tester.execute }.to output(<<~OUT
+          \e[36mecho \"hi\"\e[0m
+            hi
+        OUT
+        ).to_stdout
+      end
+
+      context 'with capture set' do
+        let(:options) { { streaming: true, capture: true } }
+
+        it 'just captures' do
+          captured = nil
+          expect { captured = tester.execute }.to output(<<~OUT
+            \e[36mecho \"hi\"\e[0m
+          OUT
+          ).to_stdout
+          expect(captured).to eq("hi\n")
+        end
+      end
+    end
+  end
 end

@@ -4,7 +4,7 @@
   "parameters": {
     "repo_dir": {
       "description": "Absolute path to the directory that holds the yum repository that we are updating.",
-      "type": "Meep_tools::Absolute_path"
+      "type": "Enterprise_tasks::Absolute_path"
     },
     "packages": {
       "description": "List of test packages to be signed. (These are the dev packages that we are injecting into the tarball). This should be an array of filenames that can be found in the repo_dir.",

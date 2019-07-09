@@ -1,9 +1,13 @@
 plan meep_tools::prep_pe(
   TargetSpec $nodes,
-  Optional[Meep_tools::Pe_family] $pe_family = undef,
-  Meep_tools::Pe_version $pe_version = 'latest',
+  Optional[Enterprise_tasks::Pe_family] $pe_family = undef,
+  Enterprise_tasks::Pe_version $pe_version = 'latest',
 ) {
-  $get_pe_results = run_plan(meep_tools::get_pe, 'nodes' => $nodes, 'pe_family' => $pe_family, 'pe_version' => $pe_version) 
+  $_version = empty($pe_version) ? {
+    true  => $pe_family,
+    false => $pe_version,
+  }
+  $get_pe_results = run_plan(enterprise_tasks::testing::get_pe, 'nodes' => $nodes, 'version' => $_version)
 
   get_targets($nodes).each |$node| {
 
