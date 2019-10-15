@@ -2,6 +2,10 @@
 # See https://github.com/puppetlabs/puppetlabs_spec_helper#using-fixtures for details
 ---
 fixtures:
+  repositories:
+      enterprise_tasks:
+        repo: 'git@github.com:puppetlabs/enterprise_tasks'
+        ref: 'master'
   forge_modules:
 #     stdlib: "puppetlabs/stdlib"
   symlinks:
