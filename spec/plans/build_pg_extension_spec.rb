@@ -10,6 +10,6 @@ describe 'meep_tools::build_pg_extension' do
   #        'name' => 'RedHat',
   #      }
   #    })
-  #  expect(run_plan('meep_tools::build_pg_extension', 'nodes' => 'some.node')).to have_succeeded
+  #  expect(run_plan('meep_tools::build_pg_extension', 'nodes' => 'some.node', 'extension' => 'pglogical', 'pe_family' => '2019.2', 'postgres_version' => '11', 'puppet_enterprise_vanagon_dir' => '/some/where')).to have_succeeded
   end
 end

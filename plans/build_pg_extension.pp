@@ -2,7 +2,7 @@ plan meep_tools::build_pg_extension(
   TargetSpec $nodes,
   Enum['pglogical','pgrepack'] $extension,
   Enterprise_tasks::Pe_family $pe_family,
-  Enterprise_tasks::Pe_version $pe_version = 'latest',
+  Variant[Enterprise_tasks::Pe_version,Enum['latest']] $pe_version = 'latest',
   Enum['96','10','11'] $postgres_version,
   Enterprise_tasks::Absolute_path $puppet_enterprise_vanagon_dir,
 ) {
