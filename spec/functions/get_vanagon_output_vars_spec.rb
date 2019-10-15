@@ -48,7 +48,7 @@ describe 'meep_tools::get_vanagon_output_vars' do
   
     it do
       is_expected.to run.with_params(osfacts).and_return({
-        'package_dir' => 'deb/bionic',
+        'package_dir' => 'deb/bionic/PC1',
         'ext'         => 'deb',
         'sep'         => '_',
         'platform'    => 'bionic_amd64',

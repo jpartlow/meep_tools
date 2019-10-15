@@ -30,7 +30,7 @@ function meep_tools::get_vanagon_output_vars(Hash $osfacts) {
       $codename = meep_tools::ubuntu_codename($_osfull)
       # The throwaway $_result is sidestepping a parser error
       $_result = {
-        'package_dir' => "deb/${codename}",
+        'package_dir' => "deb/${codename}/PC1",
         'ext'         => 'deb',
         'sep'         => '_',
         'platform'    => "${codename}_amd64",
