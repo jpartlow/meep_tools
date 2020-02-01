@@ -13,7 +13,7 @@
     },
     "branch": {
       "description": "Branch of PE to link local source modules from.",
-      "type": "Enum[irving,johnson,kearney,lovejoy]"
+      "type": "Enum[irving,johnson,kearney,lovejoy,master]"
     },
     "src_dir": {
       "description": "Root source directory to link from.",
