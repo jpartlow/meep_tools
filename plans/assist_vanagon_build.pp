@@ -30,13 +30,19 @@ plan meep_tools::assist_vanagon_build(
     $common_version = meep_tools::lookup_package_version($package_dir, "pe-postgresql-common*.${ext}")
     debug("common_version: ${common_version}")
 
+    # For some reason, packages built by puppet-enterprise-vanagon have this
+    # extra string...
+    $pe_vanagon_sep = ($osfacts['family'] in ['RedHat','SLES','Suse']) ? {
+      true    => '.pe.',
+      default => '.',
+    }
     # Ex: pe-postgresql-common-2019.1-1.pe.el7.x86_64.rpm
-    $postgresql_common  = "pe-postgresql-common${sep}${common_version}${platform}.${ext}"
-    # Ex: pe-postgresql96-2019.1.9.6.10-2.pe.el7.x86_64.rpm
-    $postgresql         = "pe-postgresql${postgres_version}${sep}${package_version}${platform}.${ext}"
-    $postgresql_server  = "pe-postgresql${postgres_version}-server${sep}${package_version}${platform}.${ext}"
-    $postgresql_contrib = "pe-postgresql${postgres_version}-contrib${sep}${package_version}${platform}.${ext}"
-    $postgresql_devel   = "pe-postgresql${postgres_version}-devel${sep}${package_version}${platform}.${ext}"
+    $postgresql_common  = "pe-postgresql-common${sep}${common_version}${pe_vanagon_sep}${platform}.${ext}"
+    # Ex: pe-postgresql96-2019.1.9.6.10-2${pe_vanagon_sep}el7.x86_64.rpm
+    $postgresql         = "pe-postgresql${postgres_version}${sep}${package_version}${pe_vanagon_sep}${platform}.${ext}"
+    $postgresql_server  = "pe-postgresql${postgres_version}-server${sep}${package_version}${pe_vanagon_sep}${platform}.${ext}"
+    $postgresql_contrib = "pe-postgresql${postgres_version}-contrib${sep}${package_version}${pe_vanagon_sep}${platform}.${ext}"
+    $postgresql_devel   = "pe-postgresql${postgres_version}-devel${sep}${package_version}${pe_vanagon_sep}${platform}.${ext}"
 
     [
       $postgresql_common,

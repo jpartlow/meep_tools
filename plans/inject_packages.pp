@@ -58,7 +58,16 @@ plan meep_tools::inject_packages(
     $packages = $_package_names.map |$package_name| {
       # Copy local vanagon packages into the tarball
       $package_version  = meep_tools::lookup_package_version($package_dir, $package_name)
-      "${package_name}${sep}${package_version}${package_platform_string}.${ext}"
+      # For some reason, packages built by puppet-enterprise-vanagon have this
+      # extra string...
+      $pe_vanagon_sep = (
+        ($osfacts['family'] in ['RedHat','SLES','Suse']) and
+        ($package_name =~ /^pe-(java,license,postgresql,nginx)/)
+      ) ? {
+        true    => '.pe.',
+        default => '.',
+      }
+      "${package_name}${sep}${package_version}${pe_vanagon_sep}${package_platform_string}.${ext}"
     }
     debug("packages: ${packages}")
 
