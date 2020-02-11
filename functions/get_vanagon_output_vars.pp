@@ -21,7 +21,7 @@ function meep_tools::get_vanagon_output_vars(Hash $osfacts) {
         'package_dir' => "el/${_osmajor}/products/x86_64",
         'ext'         => 'rpm',
         'sep'         => '-',
-        'platform'    => ".pe.el${_osmajor}.x86_64",
+        'platform'    => "el${_osmajor}.x86_64",
         'provider'    => 'rpm',
       }
     }
@@ -30,7 +30,7 @@ function meep_tools::get_vanagon_output_vars(Hash $osfacts) {
       $codename = meep_tools::ubuntu_codename($_osfull)
       # The throwaway $_result is sidestepping a parser error
       $_result = {
-        'package_dir' => "deb/${codename}/PC1",
+        'package_dir' => "deb/${codename}",
         'ext'         => 'deb',
         'sep'         => '_',
         'platform'    => "${codename}_amd64",
@@ -43,7 +43,7 @@ function meep_tools::get_vanagon_output_vars(Hash $osfacts) {
         'package_dir' => "sles/${_osmajor}/products/x86_64",
         'ext'         => 'rpm',
         'sep'         => '-',
-        'platform'    => ".pe.sles${_osmajor}.x86_64",
+        'platform'    => "sles${_osmajor}.x86_64",
         'provider'    => 'rpm',
       }
     }

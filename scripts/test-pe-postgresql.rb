@@ -310,7 +310,8 @@ class TestPostgresql < Thor
   def inject
     action("Inject locally built pe-postgresql packages into latest PE #{options[:pe_family]} tarball on all test hosts.") do
       vanagon_output_dir = "#{get_vanagon_path}/output"
-      run("#{bolt} plan run meep_tools::inject_packages pe_family=#{options[:pe_family]} postgres_version=#{options[:postgres_version]} output_dir=#{vanagon_output_dir} -n #{all_hosts.join(',')}")
+      package_names = construct_versioned_package_names
+      run("#{bolt} plan run meep_tools::inject_packages pe_family=#{options[:pe_family]} package_names='#{JSON.dump(package_names)}' output_dir=#{vanagon_output_dir} -n #{all_hosts.join(',')}")
     end
   end
 

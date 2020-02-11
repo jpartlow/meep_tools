@@ -1,4 +1,4 @@
-# For each node, copies all of the packages built in the given vanagon output
+# For each node, copies the given packages built in the given vanagon output
 # directory for the node's platform into the packages directory of the /root PE
 # tarball matching the given pe_family.
 #
@@ -8,9 +8,9 @@
 plan meep_tools::inject_packages(
   TargetSpec $nodes,
   Enterprise_tasks::Pe_family $pe_family,
-  Enum['96','10','11'] $postgres_version,
+  Variant[String,Array[String]] $package_names,
   # Absolute path to the local Vanagon directory containing pre-built
-  # pe-postgreql packages.
+  # packages.
   Enterprise_tasks::Absolute_path $output_dir,
 ) {
   run_plan(facts, nodes => $nodes)
@@ -47,21 +47,28 @@ plan meep_tools::inject_packages(
       fail_plan($_gpg_result)
     }
 
-    # Copy local vanagon packages into the tarball
-    $postgres_package_version  = meep_tools::lookup_package_version($package_dir, "pe-postgresql${postgres_version}-server")
-    $common_package_version    = meep_tools::lookup_package_version($package_dir, "pe-postgresql-common")
-    $pglogical_package_version = meep_tools::lookup_package_version($package_dir, "pe-postgresql${postgres_version}-pglogical")
-    $pgrepack_package_version  = meep_tools::lookup_package_version($package_dir, "pe-postgresql${postgres_version}-pgrepack")
+    # Ensure we have an array
+    $_package_names = case $package_names {
+      Array:   { $package_names }
+      default: { [$package_names] }
+    }
 
-    $packages = [
-      "pe-postgresql-common${sep}${common_package_version}${package_platform_string}.${ext}",
-      "pe-postgresql${postgres_version}${sep}${postgres_package_version}${package_platform_string}.${ext}",
-      "pe-postgresql${postgres_version}-server${sep}${postgres_package_version}${package_platform_string}.${ext}",
-      "pe-postgresql${postgres_version}-contrib${sep}${postgres_package_version}${package_platform_string}.${ext}",
-      "pe-postgresql${postgres_version}-devel${sep}${postgres_package_version}${package_platform_string}.${ext}",
-      "pe-postgresql${postgres_version}-pglogical${sep}${pglogical_package_version}${package_platform_string}.${ext}",
-      "pe-postgresql${postgres_version}-pgrepack${sep}${pgrepack_package_version}${package_platform_string}.${ext}",
-    ]
+    # Convert _package_names, which are really just prefixes (like pe-installer
+    # or pe-postgresql96...), to the full versioned package name.
+    $packages = $_package_names.map |$package_name| {
+      # Copy local vanagon packages into the tarball
+      $package_version  = meep_tools::lookup_package_version($package_dir, $package_name)
+      # For some reason, packages built by puppet-enterprise-vanagon have this
+      # extra string...
+      $pe_vanagon_sep = (
+        ($osfacts['family'] in ['RedHat','SLES','Suse']) and
+        ($package_name =~ /^pe-(java,license,postgresql,nginx)/)
+      ) ? {
+        true    => '.pe.',
+        default => '.',
+      }
+      "${package_name}${sep}${package_version}${pe_vanagon_sep}${package_platform_string}.${ext}"
+    }
     debug("packages: ${packages}")
 
     $packages.each() |$name| {
