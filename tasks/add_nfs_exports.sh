@@ -1,5 +1,7 @@
 #! /usr/bin/env bash
 
+set -e
+
 # shellcheck disable=SC2154
 # The directory we are allowing NFS to mount.
 source_dir=$PT_source_dir

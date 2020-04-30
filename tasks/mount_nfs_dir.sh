@@ -1,5 +1,7 @@
 #! /usr/bin/env bash
 
+set -e
+
 # shellcheck disable=SC2154
 # The ip of the host providing the nfs directory
 source_ip=$PT_source_ip
