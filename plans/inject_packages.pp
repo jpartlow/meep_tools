@@ -13,7 +13,7 @@ plan meep_tools::inject_packages(
   # packages.
   Enterprise_tasks::Absolute_path $output_dir,
 ) {
-  run_plan(facts, nodes => $nodes)
+  run_plan(facts, targets => $nodes)
 
   get_targets($nodes).each |$node| {
     $osfacts = $node.facts['os']

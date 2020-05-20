@@ -24,7 +24,7 @@ plan meep_tools::build_pg_extension(
   )
 
   # Run vanagon locally, but pass it the prepared node.
-  run_plan(facts, nodes =>  $nodes)
+  run_plan(facts, targets =>  $nodes)
   get_targets($nodes).each |$node| {
     $platform_tag = enterprise_tasks::platform_tag($node.facts['os'])
     run_command("cd ${puppet_enterprise_vanagon_dir}; bundle exec build pe-postgresql${postgres_version}-${extension} ${platform_tag} ${node.name} --engine base", 'localhost')

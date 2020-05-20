@@ -14,7 +14,7 @@ plan meep_tools::assist_vanagon_build(
   Enterprise_tasks::Absolute_path $output_dir,
 ) {
   apply_prep($nodes)
-  run_plan(facts, nodes =>  $nodes)
+  run_plan(facts, targets =>  $nodes)
 
   get_targets($nodes).each |$node| {
     $vanagon_vars = meep_tools::get_vanagon_output_vars($node.facts['os'])
