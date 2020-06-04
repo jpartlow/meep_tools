@@ -5,13 +5,24 @@
 # Packages are signed using the frankenbuilder gpg key, and the tarball's
 # package repository metadata is rebuilt so that we can install with the custom
 # built packages.
+#
+# @param nodes
+#   With PE tarballs we're going to inject packages into.
+# @param pe_family
+#   The first two numbers of the PE version. 2019.8 or similar
+# @param package_names
+#   The names of the packages to inject, without version. Ex: pe-installer.
+# @param output_dir
+#   The absolute path to the vanagon output dir.
+#   Ex: /home/jpartlow/work/src/pe-installer-vanagon/output
+# @param delete_conflicting
+#   Whether or not to purge other $package_names packages from the tarball.
 plan meep_tools::inject_packages(
   TargetSpec $nodes,
   Enterprise_tasks::Pe_family $pe_family,
   Variant[String,Array[String]] $package_names,
-  # Absolute path to the local Vanagon directory containing pre-built
-  # packages.
   Enterprise_tasks::Absolute_path $output_dir,
+  Boolean $delete_conflicting = true,
 ) {
   run_plan(facts, targets => $nodes)
 
@@ -51,6 +62,12 @@ plan meep_tools::inject_packages(
     $_package_names = case $package_names {
       Array:   { $package_names }
       default: { [$package_names] }
+    }
+
+    if $delete_conflicting {
+      $_package_names.each() |$package_name| {
+        run_command("rm -f ${pe_package_dir}/${package_name}*", $node)
+      }
     }
 
     # Convert _package_names, which are really just prefixes (like pe-installer
