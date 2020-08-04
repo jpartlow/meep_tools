@@ -6,7 +6,7 @@ plan meep_tools::import_test_package_key(
   TargetSpec $nodes,
   String $public_key = 'GPG-KEY-frankenbuilder.pub', 
 ) {
-  run_plan(facts, target => $nodes)
+  run_plan(facts, targets => $nodes)
   upload_file("meep_tools/gpg/${public_key}", "/root/${public_key}", $nodes)
   get_targets($nodes).each |$node| {
     $osfacts = $node.facts['os']
