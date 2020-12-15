@@ -9,6 +9,14 @@
     "target_ip": {
       "description": "The ip address of the target node that should be allowed to mount the source_dir.",
       "type": "String"
+    },
+    "user_id": {
+      "description": "Sets the NFS export anonuid",
+      "type": "Integer"
+    },
+    "group_id": {
+      "description": "Sets the NFS export anongid",
+      "type": "Integer"
     }
   }
 }

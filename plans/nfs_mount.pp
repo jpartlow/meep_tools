@@ -6,6 +6,8 @@ plan meep_tools::nfs_mount(
 ) {
   $user = system::env('USER')
   $home = system::env('HOME')
+  $uid = run_command('id -u', 'localhost', '_run_as' => $user)
+  $gid = run_command('id -g', 'localhost', '_run_as' => $user)
 
   $target_mount_dir = "/${user}-src"
   $_source_dir = "${home}/$source_dir"
@@ -26,7 +28,9 @@ plan meep_tools::nfs_mount(
 
     run_task(meep_tools::add_nfs_exports, localhost,
       'source_dir' => $_source_dir,
-      'target_ip'  => $target_ip
+      'target_ip'  => $target_ip,
+      'user_id'    => $uid,
+      'group_id'   => $gid,
     )
     run_task(meep_tools::mount_nfs_dir, $target,
       'source_ip'      => $_workstation_ip,
